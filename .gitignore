@@ -1,0 +1,13 @@
+# zaleznosci
+node_modules/
+
+# build
+dist/
+
+# macOS
+.DS_Store
+
+# lokalne
+*.local
+.env
+.env.*

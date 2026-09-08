@@ -1,0 +1,602 @@
+:root {
+  --tlo: #fdf3e7;
+  --tlo-2: #f7e6d3;
+  --karta: #fffdf9;
+  --tekst: #4a3b46;
+  --tekst-jasny: #8a7580;
+  --rozowy: #ef476f;
+  --rozowy-jasny: #ffd7e2;
+  --zloty: #f4b942;
+  --zloty-ciemny: #d99a1f;
+  --zielony: #57cc99;
+  --cien: 0 4px 14px rgba(122, 74, 46, 0.14);
+  --cien-mocny: 0 12px 34px rgba(122, 74, 46, 0.24);
+  --r: 18px;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  font-family: 'Baloo 2', 'Trebuchet MS', system-ui, -apple-system, sans-serif;
+  color: var(--tekst);
+  background: radial-gradient(circle at 20% 0%, #fff7ec 0%, var(--tlo) 45%, var(--tlo-2) 100%);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+button { font-family: inherit; color: inherit; cursor: pointer; }
+
+.app {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- Górne menu ---------- */
+
+.gorne-menu {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--karta);
+  box-shadow: var(--cien);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: none;
+  padding: 0;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.05;
+  color: var(--rozowy);
+  text-align: left;
+}
+.logo-kwiat { font-size: 28px; }
+
+.nawigacja {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+.nawigacja button {
+  border: 0;
+  background: transparent;
+  border-radius: 999px;
+  padding: 9px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--tekst-jasny);
+}
+.nawigacja button.aktywny {
+  background: var(--rozowy-jasny);
+  color: var(--rozowy);
+}
+.nawigacja b { font-weight: 700; opacity: 0.7; }
+
+.prawy-rog { display: flex; align-items: center; gap: 8px; }
+
+.gwiazdki {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(140deg, #ffe08a, var(--zloty));
+  color: #5c3d00;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: 999px;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.12);
+  min-width: 68px;
+  justify-content: center;
+}
+.gwiazdki .gwiazda { font-size: 17px; }
+.gwiazdki .ile { font-size: 17px; }
+
+.ikonka {
+  border: 0;
+  background: var(--tlo-2);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
+}
+
+/* ---------- Widok stołu ---------- */
+
+.stol-widok {
+  flex: 1;
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  grid-template-columns: minmax(0, 1fr) 370px;
+  grid-template-rows: 1fr auto;
+  grid-template-areas: 'plansza panele' 'akcje panele';
+  align-items: start;
+}
+
+.plansza {
+  grid-area: plansza;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-right: 96px;
+}
+
+.scena {
+  position: relative;
+  width: min(100%, 68vh);
+  aspect-ratio: 1 / 1;
+  touch-action: none;
+  user-select: none;
+  /* wlasny kontekst nakladania - warstwy elementow (do ~3000) zostaja WEWNATRZ sceny
+     i nie przebijaja gornego paska ani modali */
+  isolation: isolate;
+}
+
+.table-svg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
+
+.lodygi { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+
+.wazon { position: absolute; pointer-events: none; }
+/* Wazon w dwoch warstwach. Kolejnosc calej sceny:
+   blat 1 | wazon-tyl 5 | lodygi kwiatow 10 | LISCIE ~1000 | wazon-przod 1500 |
+   kwiaty ~2000 | dodatki ~3000
+   Przod wazonu jest NAD liscmi, zeby ich wlasne lodygi chowaly sie w wazonie
+   tak samo jak lodygi kwiatow. */
+.wazon-tyl { z-index: 5; }
+.wazon-przod { z-index: 1500; }
+.wazon svg { width: 100%; height: 100%; display: block; }
+
+.item {
+  position: absolute;
+  touch-action: none;
+  cursor: grab;
+  transform-origin: 50% 50%;
+  filter: drop-shadow(0 3px 4px rgba(90, 61, 82, 0.22));
+}
+.item:active { cursor: grabbing; }
+/* przeciagany element jest chwilowo na wierzchu, ale jego zapisana warstwa sie nie zmienia */
+.item.przeciagany { z-index: 9000 !important; }
+.item svg { display: block; width: 100%; height: auto; pointer-events: none; }
+.item.zaznaczony { filter: drop-shadow(0 0 0 #fff) drop-shadow(0 0 7px var(--rozowy)); }
+.item.statyczny { cursor: default; }
+
+.podpowiedz {
+  position: absolute;
+  z-index: 1600;
+  left: 50%;
+  top: 30%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: #a1795c;
+  font-weight: 600;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.podpowiedz small { font-weight: 500; opacity: 0.75; }
+
+.kosz {
+  position: absolute;
+  right: 4px;
+  bottom: 8px;
+  width: 84px;
+  height: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tekst-jasny);
+  transition: transform 0.15s ease;
+  pointer-events: none;
+}
+.kosz svg { width: 68px; height: 68px; }
+.kosz.aktywny { transform: scale(1.18); color: var(--rozowy); }
+
+/* narzędzia zaznaczonego elementu */
+.narzedzia {
+  position: absolute;
+  transform: translate(-50%, 0);
+  z-index: 9500;
+  background: var(--karta);
+  border-radius: var(--r);
+  box-shadow: var(--cien-mocny);
+  padding: 10px;
+  width: 268px;
+}
+.narzedzia-rzad {
+  display: flex;
+  gap: 5px;
+  margin-top: 6px;
+}
+.narzedzia-rzad button {
+  flex: 1;
+  border: 0;
+  background: var(--tlo-2);
+  border-radius: 11px;
+  height: 38px;
+  font-size: 16px;
+  font-weight: 700;
+}
+.narzedzia-rzad button.usun { background: #ffdede; flex: 0 0 42px; }
+.narzedzia-rzad button.szeroki { font-size: 11.5px; font-weight: 700; white-space: nowrap; padding: 0 4px; }
+
+/* paleta */
+.paleta-tytul { font-size: 13px; font-weight: 600; color: var(--tekst-jasny); margin-bottom: 6px; }
+.paleta-siatka {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 5px;
+}
+.swatch {
+  border: 2px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  aspect-ratio: 1;
+  padding: 0;
+  min-width: 24px;
+}
+.swatch.wybrany { border-color: var(--tekst); transform: scale(1.14); }
+
+/* ---------- Akcje ---------- */
+
+.akcje {
+  grid-area: akcje;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  padding-right: 96px;
+}
+
+.btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 22px;
+  font-size: 16px;
+  font-weight: 700;
+  background: var(--rozowy);
+  color: #fff;
+  box-shadow: 0 4px 0 #c9385c;
+  min-height: 46px;
+}
+.btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #c9385c; }
+.btn.zloty { background: linear-gradient(140deg, #ffd166, var(--zloty)); color: #5c3d00; box-shadow: 0 4px 0 var(--zloty-ciemny); }
+.btn.zloty:active { box-shadow: 0 2px 0 var(--zloty-ciemny); }
+.btn.cichy { background: var(--tlo-2); color: var(--tekst-jasny); box-shadow: 0 4px 0 #e0cdb8; }
+.btn.niebezpieczny { background: #ffdede; color: #b3243f; box-shadow: 0 4px 0 #f0b9b9; }
+.btn.maly { padding: 8px 14px; font-size: 14px; min-height: 38px; }
+.btn.duzy { padding: 14px 30px; font-size: 18px; }
+.btn.nieaktywny { opacity: 0.5; }
+
+/* ---------- Panele wyboru ---------- */
+
+.panele {
+  grid-area: panele;
+  background: var(--karta);
+  border-radius: var(--r);
+  box-shadow: var(--cien);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-height: calc(100vh - 92px);
+  position: sticky;
+  top: 78px;
+}
+
+.zakladki {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  background: var(--tlo-2);
+  align-items: center;
+}
+.zakladka {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  border-radius: 12px;
+  padding: 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tekst-jasny);
+  min-height: 52px;
+}
+.zakladka .emo { font-size: 19px; }
+.zakladka.aktywna { background: var(--karta); color: var(--rozowy); box-shadow: var(--cien); }
+.zwin {
+  border: 0;
+  background: transparent;
+  font-size: 15px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: var(--tekst-jasny);
+  display: none;
+}
+
+.panel-tresc { overflow-y: auto; padding: 12px; -webkit-overflow-scrolling: touch; }
+.wazon-kolor { margin-bottom: 12px; }
+
+.siatka {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+  gap: 8px;
+}
+
+.kafel {
+  border: 2px solid transparent;
+  background: var(--tlo);
+  border-radius: 14px;
+  padding: 8px 4px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  position: relative;
+  min-height: 96px;
+  touch-action: none;
+}
+.kafel-art { width: 56px; height: 56px; display: block; }
+.kafel-art svg { width: 100%; height: 100%; }
+.kafel-nazwa { font-size: 11.5px; font-weight: 600; line-height: 1.1; text-align: center; }
+.kafel.wybrany { border-color: var(--rozowy); background: var(--rozowy-jasny); }
+.kafel.zamkniety .kafel-art { filter: grayscale(1) opacity(0.35); }
+.kafel.zamkniety .kafel-nazwa { opacity: 0.5; }
+.klodka {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--zloty-ciemny);
+  background: #fff5d9;
+  border-radius: 8px;
+  padding: 2px 5px;
+  line-height: 1.3;
+}
+
+.duch {
+  position: fixed;
+  width: 92px;
+  height: 92px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 200;
+  opacity: 0.9;
+  filter: drop-shadow(0 6px 10px rgba(90, 61, 82, 0.35));
+}
+.duch svg { width: 100%; height: 100%; }
+
+/* ---------- Kolekcja / Sklepik ---------- */
+
+.widok { padding: 18px; max-width: 1100px; margin: 0 auto; width: 100%; }
+.naglowek-widoku { margin: 4px 0 6px; font-size: 24px; display: flex; align-items: center; gap: 10px; }
+.licznik-mini {
+  font-size: 15px;
+  background: var(--rozowy-jasny);
+  color: var(--rozowy);
+  padding: 3px 12px;
+  border-radius: 999px;
+}
+.podtytul { margin: 0 0 14px; color: var(--tekst-jasny); }
+
+.galeria {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+}
+.karta-bukietu {
+  background: var(--karta);
+  border-radius: var(--r);
+  box-shadow: var(--cien);
+  padding: 12px;
+  text-align: center;
+}
+.karta-bukietu h3 { margin: 8px 0 2px; font-size: 16px; }
+.karta-bukietu .meta { margin: 0 0 10px; font-size: 12px; color: var(--tekst-jasny); }
+.karta-akcje { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+
+.podglad {
+  position: relative;
+  isolation: isolate;
+  aspect-ratio: 1;
+  background: radial-gradient(circle at 50% 40%, #fff6ea, #f7e2cd);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.sklep-zakladki { border-radius: var(--r); margin-bottom: 14px; }
+.sklep-siatka { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); }
+.sklep-kafel { min-height: 132px; background: var(--karta); box-shadow: var(--cien); }
+.sklep-kafel .cena { font-size: 13px; font-weight: 700; color: var(--zloty-ciemny); }
+.sklep-kafel.kupiony { opacity: 0.65; }
+.sklep-kafel.kupiony .cena { color: var(--zielony); }
+.sklep-kafel.zadrogi .kafel-art { filter: grayscale(0.7) opacity(0.5); }
+.sklep-kafel.dostepny { border-color: var(--zloty); }
+
+.komunikat {
+  background: #fff5d9;
+  color: var(--zloty-ciemny);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.pusto { text-align: center; padding-top: 8vh; }
+.pusto-ikona { font-size: 54px; }
+
+/* ---------- Modale ---------- */
+
+.modal-tlo {
+  position: fixed;
+  inset: 0;
+  background: rgba(74, 59, 70, 0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 300;
+}
+.modal {
+  background: var(--karta);
+  border-radius: 22px;
+  box-shadow: var(--cien-mocny);
+  padding: 18px;
+  width: min(420px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+}
+.modal header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.modal h3 { margin: 0; font-size: 20px; }
+.zamknij { border: 0; background: var(--tlo-2); border-radius: 50%; width: 34px; height: 34px; font-size: 15px; }
+
+.pole {
+  width: 100%;
+  border: 2px solid var(--tlo-2);
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 16px;
+  font-family: inherit;
+  margin-bottom: 12px;
+}
+.pole:focus { outline: none; border-color: var(--rozowy); }
+
+.modal-akcje { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.modal-akcje.kolumna { flex-direction: column; }
+
+.rachunek { list-style: none; margin: 0 0 12px; padding: 0; }
+.rachunek li { display: flex; justify-content: space-between; padding: 7px 2px; border-bottom: 1px dashed var(--tlo-2); }
+.rachunek li.suma { border: 0; font-size: 19px; color: var(--zloty-ciemny); padding-top: 12px; }
+.ostrzezenie { color: #b3243f; font-weight: 600; }
+
+.przelacznik { display: flex; align-items: center; gap: 10px; font-weight: 600; margin-bottom: 10px; }
+.przelacznik input { width: 22px; height: 22px; accent-color: var(--rozowy); }
+.statystyki { color: var(--tekst-jasny); line-height: 1.7; }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  background: var(--tekst);
+  color: #fff;
+  padding: 12px 22px;
+  border-radius: 999px;
+  font-weight: 600;
+  box-shadow: var(--cien-mocny);
+  z-index: 400;
+  animation: wjazd 0.25s ease;
+}
+@keyframes wjazd { from { opacity: 0; transform: translate(-50%, 12px); } }
+
+/* ---------- Telefon ---------- */
+
+@media (max-width: 900px) {
+  .stol-widok {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas: 'plansza' 'akcje' 'panele';
+    padding: 10px;
+    gap: 10px;
+  }
+  .plansza { padding-right: 0; padding-bottom: 0; }
+  .akcje { padding-right: 0; }
+  .scena { width: min(100%, 56vh); }
+  .kosz { right: 0; bottom: 0; width: 62px; height: 74px; }
+  .kosz svg { width: 50px; height: 50px; }
+  .panele { position: static; max-height: none; }
+  .panel-tresc { max-height: 40vh; }
+  .zwin { display: block; }
+  .panele.zwiniete .panel-tresc { display: none; }
+  .gorne-menu { padding: 8px 8px; gap: 6px; flex-wrap: nowrap; }
+  .logo-tekst { display: none; }
+  .logo-kwiat { font-size: 23px; }
+  .nawigacja { gap: 2px; }
+  .nawigacja button { padding: 8px 9px; font-size: 13.5px; white-space: nowrap; }
+  .gwiazdki { min-width: 0; padding: 6px 10px; gap: 4px; }
+  .gwiazdki .gwiazda, .gwiazdki .ile { font-size: 15px; }
+  .ikonka { width: 34px; height: 34px; font-size: 16px; flex: 0 0 auto; }
+  .prawy-rog { gap: 5px; }
+  .narzedzia { width: 252px; }
+  .kafel { min-height: 92px; }
+  .kafel-art { width: 50px; height: 50px; }
+}
+
+@media (max-width: 420px) {
+  .siatka { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); }
+  .btn { padding: 11px 16px; font-size: 15px; }
+}
+
+/* ---------- Kartoteka ikon ---------- */
+
+.kartoteka-paleta {
+  background: var(--karta);
+  border-radius: var(--r);
+  box-shadow: var(--cien);
+  padding: 12px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.kartoteka-paleta .paleta { flex: 0 1 340px; min-width: 220px; max-width: 340px; }
+.kartoteka-sekcja { margin-bottom: 22px; }
+.kartoteka-sekcja h3 { display: flex; align-items: center; gap: 8px; font-size: 18px; margin: 0 0 10px; }
+.id-pliku { font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; color: var(--tekst-jasny); }
+
+/* licznik zajetych miejsc w wazonie */
+.miejsca {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--karta);
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--tekst-jasny);
+  box-shadow: var(--cien);
+  min-height: 46px;
+}
+.miejsca b { font-weight: 700; white-space: nowrap; }
+.miejsca b.pelno { color: var(--rozowy); }
+
+.rachunek li.uwaga { font-size: 13px; color: var(--tekst-jasny); padding-top: 0; }
+.rachunek li.uwaga b { font-weight: 600; }
+.wskazowka {
+  background: #fff5d9;
+  color: var(--zloty-ciemny);
+  border-radius: 12px;
+  padding: 9px 12px;
+  font-size: 13.5px;
+  margin: 0 0 12px;
+}
+
+/* Kopia lodygi w warstwie jej wlasnego kwiatu - przycieta od gory,
+   zeby nie rysowala sie po korpusie wazonu. */
+.lodyga-nad {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}

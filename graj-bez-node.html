@@ -1,0 +1,681 @@
+<!doctype html>
+<!--
+  Ogrod Gwiazdek - wersja bez instalowania Node/npm.
+  WYGENEROWANY PLIK - nie edytuj recznie.
+  Zrodla siedza w src/; po zmianach przebuduj:
+      python3 scripts/zbuduj-graj-bez-node.py
+
+  Otwiera sie zwyklym dwuklikiem. Z internetu pobiera tylko React, Babel i font.
+-->
+<html lang="pl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#f7e9d8">
+<title>Ogrod Gwiazdek</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --tlo: #fdf3e7;
+  --tlo-2: #f7e6d3;
+  --karta: #fffdf9;
+  --tekst: #4a3b46;
+  --tekst-jasny: #8a7580;
+  --rozowy: #ef476f;
+  --rozowy-jasny: #ffd7e2;
+  --zloty: #f4b942;
+  --zloty-ciemny: #d99a1f;
+  --zielony: #57cc99;
+  --cien: 0 4px 14px rgba(122, 74, 46, 0.14);
+  --cien-mocny: 0 12px 34px rgba(122, 74, 46, 0.24);
+  --r: 18px;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  font-family: 'Baloo 2', 'Trebuchet MS', system-ui, -apple-system, sans-serif;
+  color: var(--tekst);
+  background: radial-gradient(circle at 20% 0%, #fff7ec 0%, var(--tlo) 45%, var(--tlo-2) 100%);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+button { font-family: inherit; color: inherit; cursor: pointer; }
+
+.app {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- Górne menu ---------- */
+
+.gorne-menu {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--karta);
+  box-shadow: var(--cien);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: none;
+  padding: 0;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.05;
+  color: var(--rozowy);
+  text-align: left;
+}
+.logo-kwiat { font-size: 28px; }
+
+.nawigacja {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+.nawigacja button {
+  border: 0;
+  background: transparent;
+  border-radius: 999px;
+  padding: 9px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--tekst-jasny);
+}
+.nawigacja button.aktywny {
+  background: var(--rozowy-jasny);
+  color: var(--rozowy);
+}
+.nawigacja b { font-weight: 700; opacity: 0.7; }
+
+.prawy-rog { display: flex; align-items: center; gap: 8px; }
+
+.gwiazdki {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(140deg, #ffe08a, var(--zloty));
+  color: #5c3d00;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: 999px;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.12);
+  min-width: 68px;
+  justify-content: center;
+}
+.gwiazdki .gwiazda { font-size: 17px; }
+.gwiazdki .ile { font-size: 17px; }
+
+.ikonka {
+  border: 0;
+  background: var(--tlo-2);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
+}
+
+/* ---------- Widok stołu ---------- */
+
+.stol-widok {
+  flex: 1;
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  grid-template-columns: minmax(0, 1fr) 370px;
+  grid-template-rows: 1fr auto;
+  grid-template-areas: 'plansza panele' 'akcje panele';
+  align-items: start;
+}
+
+.plansza {
+  grid-area: plansza;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-right: 96px;
+}
+
+.scena {
+  position: relative;
+  width: min(100%, 68vh);
+  aspect-ratio: 1 / 1;
+  touch-action: none;
+  user-select: none;
+  /* wlasny kontekst nakladania - warstwy elementow (do ~3000) zostaja WEWNATRZ sceny
+     i nie przebijaja gornego paska ani modali */
+  isolation: isolate;
+}
+
+.table-svg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
+
+.lodygi { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+
+.wazon { position: absolute; pointer-events: none; }
+/* Wazon w dwoch warstwach. Kolejnosc calej sceny:
+   blat 1 | wazon-tyl 5 | lodygi kwiatow 10 | LISCIE ~1000 | wazon-przod 1500 |
+   kwiaty ~2000 | dodatki ~3000
+   Przod wazonu jest NAD liscmi, zeby ich wlasne lodygi chowaly sie w wazonie
+   tak samo jak lodygi kwiatow. */
+.wazon-tyl { z-index: 5; }
+.wazon-przod { z-index: 1500; }
+.wazon svg { width: 100%; height: 100%; display: block; }
+
+.item {
+  position: absolute;
+  touch-action: none;
+  cursor: grab;
+  transform-origin: 50% 50%;
+  filter: drop-shadow(0 3px 4px rgba(90, 61, 82, 0.22));
+}
+.item:active { cursor: grabbing; }
+/* przeciagany element jest chwilowo na wierzchu, ale jego zapisana warstwa sie nie zmienia */
+.item.przeciagany { z-index: 9000 !important; }
+.item svg { display: block; width: 100%; height: auto; pointer-events: none; }
+.item.zaznaczony { filter: drop-shadow(0 0 0 #fff) drop-shadow(0 0 7px var(--rozowy)); }
+.item.statyczny { cursor: default; }
+
+.podpowiedz {
+  position: absolute;
+  z-index: 1600;
+  left: 50%;
+  top: 30%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: #a1795c;
+  font-weight: 600;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.podpowiedz small { font-weight: 500; opacity: 0.75; }
+
+.kosz {
+  position: absolute;
+  right: 4px;
+  bottom: 8px;
+  width: 84px;
+  height: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tekst-jasny);
+  transition: transform 0.15s ease;
+  pointer-events: none;
+}
+.kosz svg { width: 68px; height: 68px; }
+.kosz.aktywny { transform: scale(1.18); color: var(--rozowy); }
+
+/* narzędzia zaznaczonego elementu */
+.narzedzia {
+  position: absolute;
+  transform: translate(-50%, 0);
+  z-index: 9500;
+  background: var(--karta);
+  border-radius: var(--r);
+  box-shadow: var(--cien-mocny);
+  padding: 10px;
+  width: 268px;
+}
+.narzedzia-rzad {
+  display: flex;
+  gap: 5px;
+  margin-top: 6px;
+}
+.narzedzia-rzad button {
+  flex: 1;
+  border: 0;
+  background: var(--tlo-2);
+  border-radius: 11px;
+  height: 38px;
+  font-size: 16px;
+  font-weight: 700;
+}
+.narzedzia-rzad button.usun { background: #ffdede; flex: 0 0 42px; }
+.narzedzia-rzad button.szeroki { font-size: 11.5px; font-weight: 700; white-space: nowrap; padding: 0 4px; }
+
+/* paleta */
+.paleta-tytul { font-size: 13px; font-weight: 600; color: var(--tekst-jasny); margin-bottom: 6px; }
+.paleta-siatka {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 5px;
+}
+.swatch {
+  border: 2px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  aspect-ratio: 1;
+  padding: 0;
+  min-width: 24px;
+}
+.swatch.wybrany { border-color: var(--tekst); transform: scale(1.14); }
+
+/* ---------- Akcje ---------- */
+
+.akcje {
+  grid-area: akcje;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  padding-right: 96px;
+}
+
+.btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 22px;
+  font-size: 16px;
+  font-weight: 700;
+  background: var(--rozowy);
+  color: #fff;
+  box-shadow: 0 4px 0 #c9385c;
+  min-height: 46px;
+}
+.btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #c9385c; }
+.btn.zloty { background: linear-gradient(140deg, #ffd166, var(--zloty)); color: #5c3d00; box-shadow: 0 4px 0 var(--zloty-ciemny); }
+.btn.zloty:active { box-shadow: 0 2px 0 var(--zloty-ciemny); }
+.btn.cichy { background: var(--tlo-2); color: var(--tekst-jasny); box-shadow: 0 4px 0 #e0cdb8; }
+.btn.niebezpieczny { background: #ffdede; color: #b3243f; box-shadow: 0 4px 0 #f0b9b9; }
+.btn.maly { padding: 8px 14px; font-size: 14px; min-height: 38px; }
+.btn.duzy { padding: 14px 30px; font-size: 18px; }
+.btn.nieaktywny { opacity: 0.5; }
+
+/* ---------- Panele wyboru ---------- */
+
+.panele {
+  grid-area: panele;
+  background: var(--karta);
+  border-radius: var(--r);
+  box-shadow: var(--cien);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-height: calc(100vh - 92px);
+  position: sticky;
+  top: 78px;
+}
+
+.zakladki {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  background: var(--tlo-2);
+  align-items: center;
+}
+.zakladka {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  border-radius: 12px;
+  padding: 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tekst-jasny);
+  min-height: 52px;
+}
+.zakladka .emo { font-size: 19px; }
+.zakladka.aktywna { background: var(--karta); color: var(--rozowy); box-shadow: var(--cien); }
+.zwin {
+  border: 0;
+  background: transparent;
+  font-size: 15px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: var(--tekst-jasny);
+  display: none;
+}
+
+.panel-tresc { overflow-y: auto; padding: 12px; -webkit-overflow-scrolling: touch; }
+.wazon-kolor { margin-bottom: 12px; }
+
+.siatka {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+  gap: 8px;
+}
+
+.kafel {
+  border: 2px solid transparent;
+  background: var(--tlo);
+  border-radius: 14px;
+  padding: 8px 4px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  position: relative;
+  min-height: 96px;
+  touch-action: none;
+}
+.kafel-art { width: 56px; height: 56px; display: block; }
+.kafel-art svg { width: 100%; height: 100%; }
+.kafel-nazwa { font-size: 11.5px; font-weight: 600; line-height: 1.1; text-align: center; }
+.kafel.wybrany { border-color: var(--rozowy); background: var(--rozowy-jasny); }
+.kafel.zamkniety .kafel-art { filter: grayscale(1) opacity(0.35); }
+.kafel.zamkniety .kafel-nazwa { opacity: 0.5; }
+.klodka {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--zloty-ciemny);
+  background: #fff5d9;
+  border-radius: 8px;
+  padding: 2px 5px;
+  line-height: 1.3;
+}
+
+.duch {
+  position: fixed;
+  width: 92px;
+  height: 92px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 200;
+  opacity: 0.9;
+  filter: drop-shadow(0 6px 10px rgba(90, 61, 82, 0.35));
+}
+.duch svg { width: 100%; height: 100%; }
+
+/* ---------- Kolekcja / Sklepik ---------- */
+
+.widok { padding: 18px; max-width: 1100px; margin: 0 auto; width: 100%; }
+.naglowek-widoku { margin: 4px 0 6px; font-size: 24px; display: flex; align-items: center; gap: 10px; }
+.licznik-mini {
+  font-size: 15px;
+  background: var(--rozowy-jasny);
+  color: var(--rozowy);
+  padding: 3px 12px;
+  border-radius: 999px;
+}
+.podtytul { margin: 0 0 14px; color: var(--tekst-jasny); }
+
+.galeria {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+}
+.karta-bukietu {
+  background: var(--karta);
+  border-radius: var(--r);
+  box-shadow: var(--cien);
+  padding: 12px;
+  text-align: center;
+}
+.karta-bukietu h3 { margin: 8px 0 2px; font-size: 16px; }
+.karta-bukietu .meta { margin: 0 0 10px; font-size: 12px; color: var(--tekst-jasny); }
+.karta-akcje { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+
+.podglad {
+  position: relative;
+  isolation: isolate;
+  aspect-ratio: 1;
+  background: radial-gradient(circle at 50% 40%, #fff6ea, #f7e2cd);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.sklep-zakladki { border-radius: var(--r); margin-bottom: 14px; }
+.sklep-siatka { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); }
+.sklep-kafel { min-height: 132px; background: var(--karta); box-shadow: var(--cien); }
+.sklep-kafel .cena { font-size: 13px; font-weight: 700; color: var(--zloty-ciemny); }
+.sklep-kafel.kupiony { opacity: 0.65; }
+.sklep-kafel.kupiony .cena { color: var(--zielony); }
+.sklep-kafel.zadrogi .kafel-art { filter: grayscale(0.7) opacity(0.5); }
+.sklep-kafel.dostepny { border-color: var(--zloty); }
+
+.komunikat {
+  background: #fff5d9;
+  color: var(--zloty-ciemny);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.pusto { text-align: center; padding-top: 8vh; }
+.pusto-ikona { font-size: 54px; }
+
+/* ---------- Modale ---------- */
+
+.modal-tlo {
+  position: fixed;
+  inset: 0;
+  background: rgba(74, 59, 70, 0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 300;
+}
+.modal {
+  background: var(--karta);
+  border-radius: 22px;
+  box-shadow: var(--cien-mocny);
+  padding: 18px;
+  width: min(420px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+}
+.modal header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.modal h3 { margin: 0; font-size: 20px; }
+.zamknij { border: 0; background: var(--tlo-2); border-radius: 50%; width: 34px; height: 34px; font-size: 15px; }
+
+.pole {
+  width: 100%;
+  border: 2px solid var(--tlo-2);
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 16px;
+  font-family: inherit;
+  margin-bottom: 12px;
+}
+.pole:focus { outline: none; border-color: var(--rozowy); }
+
+.modal-akcje { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.modal-akcje.kolumna { flex-direction: column; }
+
+.rachunek { list-style: none; margin: 0 0 12px; padding: 0; }
+.rachunek li { display: flex; justify-content: space-between; padding: 7px 2px; border-bottom: 1px dashed var(--tlo-2); }
+.rachunek li.suma { border: 0; font-size: 19px; color: var(--zloty-ciemny); padding-top: 12px; }
+.ostrzezenie { color: #b3243f; font-weight: 600; }
+
+.przelacznik { display: flex; align-items: center; gap: 10px; font-weight: 600; margin-bottom: 10px; }
+.przelacznik input { width: 22px; height: 22px; accent-color: var(--rozowy); }
+.statystyki { color: var(--tekst-jasny); line-height: 1.7; }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  background: var(--tekst);
+  color: #fff;
+  padding: 12px 22px;
+  border-radius: 999px;
+  font-weight: 600;
+  box-shadow: var(--cien-mocny);
+  z-index: 400;
+  animation: wjazd 0.25s ease;
+}
+@keyframes wjazd { from { opacity: 0; transform: translate(-50%, 12px); } }
+
+/* ---------- Telefon ---------- */
+
+@media (max-width: 900px) {
+  .stol-widok {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas: 'plansza' 'akcje' 'panele';
+    padding: 10px;
+    gap: 10px;
+  }
+  .plansza { padding-right: 0; padding-bottom: 0; }
+  .akcje { padding-right: 0; }
+  .scena { width: min(100%, 56vh); }
+  .kosz { right: 0; bottom: 0; width: 62px; height: 74px; }
+  .kosz svg { width: 50px; height: 50px; }
+  .panele { position: static; max-height: none; }
+  .panel-tresc { max-height: 40vh; }
+  .zwin { display: block; }
+  .panele.zwiniete .panel-tresc { display: none; }
+  .gorne-menu { padding: 8px 8px; gap: 6px; flex-wrap: nowrap; }
+  .logo-tekst { display: none; }
+  .logo-kwiat { font-size: 23px; }
+  .nawigacja { gap: 2px; }
+  .nawigacja button { padding: 8px 9px; font-size: 13.5px; white-space: nowrap; }
+  .gwiazdki { min-width: 0; padding: 6px 10px; gap: 4px; }
+  .gwiazdki .gwiazda, .gwiazdki .ile { font-size: 15px; }
+  .ikonka { width: 34px; height: 34px; font-size: 16px; flex: 0 0 auto; }
+  .prawy-rog { gap: 5px; }
+  .narzedzia { width: 252px; }
+  .kafel { min-height: 92px; }
+  .kafel-art { width: 50px; height: 50px; }
+}
+
+@media (max-width: 420px) {
+  .siatka { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); }
+  .btn { padding: 11px 16px; font-size: 15px; }
+}
+
+/* ---------- Kartoteka ikon ---------- */
+
+.kartoteka-paleta {
+  background: var(--karta);
+  border-radius: var(--r);
+  box-shadow: var(--cien);
+  padding: 12px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.kartoteka-paleta .paleta { flex: 0 1 340px; min-width: 220px; max-width: 340px; }
+.kartoteka-sekcja { margin-bottom: 22px; }
+.kartoteka-sekcja h3 { display: flex; align-items: center; gap: 8px; font-size: 18px; margin: 0 0 10px; }
+.id-pliku { font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; color: var(--tekst-jasny); }
+
+/* licznik zajetych miejsc w wazonie */
+.miejsca {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--karta);
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--tekst-jasny);
+  box-shadow: var(--cien);
+  min-height: 46px;
+}
+.miejsca b { font-weight: 700; white-space: nowrap; }
+.miejsca b.pelno { color: var(--rozowy); }
+
+.rachunek li.uwaga { font-size: 13px; color: var(--tekst-jasny); padding-top: 0; }
+.rachunek li.uwaga b { font-weight: 600; }
+.wskazowka {
+  background: #fff5d9;
+  color: var(--zloty-ciemny);
+  border-radius: 12px;
+  padding: 9px 12px;
+  font-size: 13.5px;
+  margin: 0 0 12px;
+}
+
+/* Kopia lodygi w warstwie jej wlasnego kwiatu - przycieta od gory,
+   zeby nie rysowala sie po korpusie wazonu. */
+.lodyga-nad {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+</style>
+<style>
+#err { color: #b3243f; white-space: pre-wrap; font: 13px ui-monospace, Menlo, monospace; padding: 16px; }
+#ladowanie { padding: 40px; text-align: center; color: #8a7580; font-size: 17px; }
+</style>
+</head><body>
+<div id="err"></div>
+<div id="root"><div id="ladowanie">Sadzimy kwiatki…</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.4/babel.min.js"></script>
+
+<script id="zrodla" type="application/json">
+{"src/data/colors.js": "// Pomocniki koloru: z jednego koloru bazowego wyliczamy cala palete odcieni,\n// dzieki czemu kazdy kwiat da sie przemalowac jednym klikiem.\n\nfunction hexToRgb(hex) {\n  const h = hex.replace('#', '')\n  const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16)\n  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 }\n}\n\nfunction rgbToHsl({ r, g, b }) {\n  r /= 255; g /= 255; b /= 255\n  const max = Math.max(r, g, b), min = Math.min(r, g, b)\n  let h = 0, s = 0\n  const l = (max + min) / 2\n  const d = max - min\n  if (d !== 0) {\n    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)\n    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6\n    else if (max === g) h = ((b - r) / d + 2) / 6\n    else h = ((r - g) / d + 4) / 6\n  }\n  return { h: h * 360, s: s * 100, l: l * 100 }\n}\n\nconst clamp = (v, a, b) => Math.min(b, Math.max(a, v))\n\nexport function shade(hex, dl, ds = 0, dh = 0) {\n  const { h, s, l } = rgbToHsl(hexToRgb(hex))\n  return `hsl(${(h + dh + 360) % 360} ${clamp(s + ds, 0, 100)}% ${clamp(l + dl, 0, 100)}%)`\n}\n\n// Paleta odcieni jednego kwiatu.\n// Dla bardzo jasnych kolorow (biel, krem) przyciemniamy mocniej, zeby ksztalt byl czytelny.\nexport function palette(hex) {\n  const { l } = rgbToHsl(hexToRgb(hex))\n  const light = l > 82\n  return {\n    base: hex,\n    light: shade(hex, light ? -5 : 11, -4),\n    dark: shade(hex, light ? -19 : -12, 2),\n    deep: shade(hex, light ? -33 : -24, 4),\n    line: shade(hex, light ? -44 : -30, 6),\n  }\n}\n\n// Palety do wyboru w grze\nexport const FLOWER_COLORS = [\n  '#ef476f', '#ff7aa2', '#ffb3c6', '#fff1f4',\n  '#f4a261', '#ffd166', '#fff3b0', '#ffffff',\n  '#8ac926', '#57cc99', '#4cc9f0', '#4361ee',\n  '#9d4edd', '#c77dff', '#e0aaff', '#a4133c',\n]\n\nexport const VASE_COLORS = [\n  '#e8d5c4', '#d9b8a0', '#c98b6b', '#8d5a44',\n  '#a8dadc', '#457b9d', '#1d3557', '#b7e4c7',\n  '#f7b2bd', '#e5989b', '#ffd6a5', '#fdfcdc',\n  '#cdb4db', '#9a8c98', '#f1faee', '#2f3e46',\n]\n\nexport const LEAF_COLORS = [\n  '#2d6a4f', '#40916c', '#52b788', '#95d5b2',\n  '#7f9172', '#a3b18a', '#588157', '#344e41',\n]\n\nexport const EXTRA_COLORS = [\n  '#e63946', '#ff7aa2', '#ffd166', '#f4a261',\n  '#4cc9f0', '#4361ee', '#9d4edd', '#ffffff',\n  '#2d6a4f', '#8d5a44', '#f1faee', '#2f3e46',\n]\n\nexport const COLOR_SETS = {\n  flower: FLOWER_COLORS,\n  leaf: LEAF_COLORS,\n  vase: VASE_COLORS,\n  extra: EXTRA_COLORS,\n}\n", "src/data/catalog.js": "// Katalog wszystkich elementow gry: nazwy, ceny w sklepiku, wartosc przy sprzedazy,\n// kolor domyslny i to, czy element jest odblokowany od startu.\n//\n// wartosc  = ile gwiazdek dokłada do bukietu przy sprzedaży\n// cena     = ile gwiazdek kosztuje odblokowanie w sklepiku\n// skala    = wielkosc glowki wzgledem bazowej (kwiaty pionowe/kolosowe sa wieksze)\n\nexport const FLOWERS = [\n  { id: 'roza',        nazwa: 'Róża',            kolor: '#ef476f', wartosc: 2, cena: 0,  skala: 1.05, start: true },\n  { id: 'stokrotka',   nazwa: 'Stokrotka',       kolor: '#fff1f4', wartosc: 1, cena: 0,  skala: 0.95, start: true },\n  { id: 'tulipan',     nazwa: 'Tulipan',         kolor: '#ff7aa2', wartosc: 1, cena: 0,  skala: 1.0,  start: true, nasada: { x: 50, y: 75 } },\n  { id: 'rumianek',    nazwa: 'Rumianek',        kolor: '#ffffff', wartosc: 1, cena: 0,  skala: 0.9,  start: true },\n  { id: 'gipsowka',    nazwa: 'Gipsówka',        kolor: '#fff1f4', wartosc: 1, cena: 30, skala: 1.0, nasada: { x: 50, y: 72 } },\n  { id: 'bellis',      nazwa: 'Bellis',          kolor: '#ffb3c6', wartosc: 1, cena: 45, skala: 0.85 },\n  { id: 'viola',       nazwa: 'Bratek',          kolor: '#c77dff', wartosc: 2, cena: 65, skala: 0.9, nasada: { x: 50, y: 80 } },\n  { id: 'narcyz',      nazwa: 'Narcyz',          kolor: '#ffd166', wartosc: 2, cena: 90, skala: 1.0 },\n  { id: 'kosmos',      nazwa: 'Kosmos',          kolor: '#ff7aa2', wartosc: 2, cena: 115, skala: 1.0 },\n  { id: 'cynia',       nazwa: 'Cynia',           kolor: '#f4a261', wartosc: 2, cena: 145, skala: 1.05 },\n  { id: 'szafirek',    nazwa: 'Szafirek',        kolor: '#4361ee', wartosc: 2, cena: 175, skala: 1.0, nasada: { x: 50, y: 92 } },\n  { id: 'hortensja',   nazwa: 'Hortensja',       kolor: '#c77dff', wartosc: 3, cena: 285, skala: 1.15 },\n  { id: 'werbena',     nazwa: 'Werbena',         kolor: '#a4133c', wartosc: 2, cena: 210, skala: 1.0 },\n  { id: 'iberis',      nazwa: 'Iberis',          kolor: '#fdf0f5', wartosc: 2, cena: 245, skala: 1.0, nasada: { x: 50, y: 74 } },\n  { id: 'jasmin',      nazwa: 'Jaśmin',          kolor: '#fff1f4', wartosc: 2, cena: 415, skala: 1.05, nasada: { x: 50, y: 80 } },\n  { id: 'frezja',      nazwa: 'Frezja',          kolor: '#ffd166', wartosc: 3, cena: 465, skala: 1.1, nasada: { x: 25, y: 82 } },\n  { id: 'lupinus',     nazwa: 'Łubin',           kolor: '#9d4edd', wartosc: 3, cena: 515, skala: 1.15, nasada: { x: 50, y: 92 } },\n  { id: 'antirrhinum', nazwa: 'Lwia paszcza',    kolor: '#f4a261', wartosc: 3, cena: 570, skala: 1.15, nasada: { x: 50, y: 88 } },\n  { id: 'brachycome',  nazwa: 'Brachycome',      kolor: '#4cc9f0', wartosc: 2, cena: 325, skala: 0.9 },\n  { id: 'godecja',     nazwa: 'Godecja',         kolor: '#ffb3c6', wartosc: 2, cena: 370, skala: 1.0 },\n  { id: 'polygonum',   nazwa: 'Rdest',           kolor: '#ffb3c6', wartosc: 3, cena: 630, skala: 1.1, nasada: { x: 49, y: 92 } },\n  { id: 'nicotiana',   nazwa: 'Tytoń ozdobny',   kolor: '#8ac926', wartosc: 3, cena: 700, skala: 1.0 },\n  { id: 'piwonia',     nazwa: 'Piwonia królewska', kolor: '#e5397a', wartosc: 6, cena: 1200, skala: 1.3 },\n]\n\nexport const LEAVES = [\n  { id: 'listek',        nazwa: 'Listek',          kolor: '#52b788', wartosc: 1, cena: 0,  skala: 1.0,  start: true },\n  { id: 'eukaliptus',    nazwa: 'Eukaliptus',      kolor: '#95d5b2', wartosc: 1, cena: 0,  skala: 1.15, start: true },\n  { id: 'zdzbla',        nazwa: 'Długa trawa',     kolor: '#8fbf7a', wartosc: 1, cena: 0,  skala: 1.3,  start: true },\n  { id: 'paproc',     nazwa: 'Paproć',     kolor: '#2d6a4f', wartosc: 1, cena: 50, skala: 1.2 },\n  { id: 'ruskus',     nazwa: 'Ruskus',     kolor: '#40916c', wartosc: 1, cena: 80, skala: 1.15 },\n  { id: 'bluszcz',    nazwa: 'Bluszcz',    kolor: '#52b788', wartosc: 1, cena: 120, skala: 1.15 },\n  { id: 'trawa',      nazwa: 'Trawa ozdobna', kolor: '#a3b18a', wartosc: 1, cena: 170, skala: 1.2 },\n]\n\nexport const VASES_CATALOG = [\n  { id: 'wazon_kula',   nazwa: 'Okrągły wazon',    kolor: '#a8dadc', bonus: 0, cena: 0,  start: true },\n  { id: 'doniczka',     nazwa: 'Doniczka',         kolor: '#c98b6b', bonus: 1, cena: 70 },\n  { id: 'wazon_smukly', nazwa: 'Smukły wazon',     kolor: '#457b9d', bonus: 1, cena: 120 },\n  { id: 'sloik',        nazwa: 'Słoik ze wstążką', kolor: '#b7e4c7', bonus: 2, cena: 180 },\n  { id: 'dzbanek',      nazwa: 'Dzbanek',          kolor: '#e5989b', bonus: 2, cena: 250 },\n  { id: 'koszyk',       nazwa: 'Koszyk',           kolor: '#d9a066', bonus: 2, cena: 330 },\n  { id: 'papier',       nazwa: 'Papier ozdobny',   kolor: '#e8c4b0', bonus: 3, cena: 430 },\n  { id: 'folia',        nazwa: 'Folia',            kolor: '#f1faee', bonus: 3, cena: 550 },\n]\n\nexport const EXTRAS = [\n  { id: 'kokarda',          nazwa: 'Kokarda',    kolor: '#e63946', wartosc: 2, cena: 0,  skala: 0.85, start: true },\n  { id: 'wstazka',          nazwa: 'Wstążka',    kolor: '#ff7aa2', wartosc: 1, cena: 55, skala: 1.0 },\n  { id: 'drut',             nazwa: 'Linka',      kolor: '#ffd166', wartosc: 1, cena: 55, skala: 1.0 },\n  { id: 'perelki',          nazwa: 'Perełki',    kolor: '#ffffff', wartosc: 1, cena: 90, skala: 0.95 },\n  { id: 'serduszko',        nazwa: 'Serduszko',  kolor: '#e63946', wartosc: 1, cena: 130, skala: 0.7 },\n  { id: 'gwiazdka_ozdoba',  nazwa: 'Gwiazdka',   kolor: '#ffd166', wartosc: 1, cena: 170, skala: 0.7 },\n  { id: 'motylek',          nazwa: 'Motylek',    kolor: '#4cc9f0', wartosc: 2, cena: 220, skala: 0.75 },\n  { id: 'biedronka',        nazwa: 'Biedronka',  kolor: '#e63946', wartosc: 2, cena: 280, skala: 0.55 },\n]\n\n// Jedno pokrętło do przeskalowania całego sklepiku. 1 = ceny jak wyżej,\n// 0.5 = wszystko dwa razy tańsze, 2 = dwa razy droższe.\nexport const MNOZNIK_CEN = 1\n\nif (MNOZNIK_CEN !== 1) {\n  for (const lista of [FLOWERS, LEAVES, VASES_CATALOG, EXTRAS]) {\n    for (const poz of lista) poz.cena = Math.round(poz.cena * MNOZNIK_CEN)\n  }\n}\n\n// szybkie wyszukiwanie po id\nexport const BY_ID = {\n  flower: Object.fromEntries(FLOWERS.map((f) => [f.id, f])),\n  leaf: Object.fromEntries(LEAVES.map((f) => [f.id, f])),\n  vase: Object.fromEntries(VASES_CATALOG.map((f) => [f.id, f])),\n  extra: Object.fromEntries(EXTRAS.map((f) => [f.id, f])),\n}\n\nexport const CATALOG_LIST = { flower: FLOWERS, leaf: LEAVES, vase: VASES_CATALOG, extra: EXTRAS }\n\n// Punkt styku lodygi z kwiatem (pole `nasada` przy kwiatach) podawany jest\n// w jednostkach rysunku 0-100; brak pola oznacza srodek ikony.\nexport const SRODEK_IKONY = { x: 50, y: 50 }\n\n// Domyslna nasada: dol glowki, nie jej srodek. Dzieki temu lodyga podchodzi\n// do kwiatu OD DOLU i widac ja spod platkow, zamiast chowac sie calkiem za nimi.\nexport const NASADA_DOMYSLNA = { x: 50, y: 76 }\n\n// Bazowa wielkosc elementu na stole, w % szerokosci sceny.\n// Uzywaja jej Workbench, BouquetPreview i logika sadzenia lisci.\nexport const ROZMIAR_ELEMENTU = { flower: 21, leaf: 25, extra: 20 }\n\n// Lisc obraca sie wokol punktu 84% swojej wysokosci (patrz Workbench),\n// wiec jego nasada lezy 8.5 jednostki ponizej srodka.\nexport const NASADA_LISCIA = ROZMIAR_ELEMENTU.leaf * (0.84 - 0.5)\n\nexport const KATEGORIE = [\n  { key: 'flower', label: 'Kwiaty', emoji: '🌸' },\n  { key: 'leaf', label: 'Liście', emoji: '🌿' },\n  { key: 'vase', label: 'Wazony', emoji: '🏺' },\n  { key: 'extra', label: 'Dodatki', emoji: '🎀' },\n]\n\n// Ile elementów zmieści się na jednym bukiecie. Każda kategoria ma WŁASNĄ pulę,\n// żeby zieleń nie zabierała miejsca kwiatom.\nexport const LIMIT_KWIATOW = 15\nexport const LIMIT_LISCI = 15\nexport const LIMIT_DODATKOW = 6\n\n// --- Reguła wyceny bukietu (prosta, zeby dalo sie ja wytlumaczyc dziecku) ---\n// 1. Pierwszy kwiat danego gatunku jest wart tyle, ile ma w katalogu.\n// 2. Każdy KOLEJNY taki sam kwiat jest wart tylko 1 gwiazdkę.\n//    (bez tego dało się wsadzić same lwie paszcze i drukować gwiazdki)\n// 3. Za każdy różny gatunek kwiatu +1 gwiazdka — premia za różnorodność.\n// 4. Liście: 1 gwiazdka za każdy RÓŻNY rodzaj, powtórki gratis.\n// 5. Dodatki: liczy się każdy różny rodzaj, powtórki gratis.\n// 6. Wazon/opakowanie dokłada swój bonus.\n// 7. Bukiet musi mieć min. 3 kwiaty, żeby dało się go sprzedać.\nexport function wycen(bukiet, vaseId) {\n  const kwiaty = bukiet.filter((b) => b.kind === 'flower')\n  const liscie = bukiet.filter((b) => b.kind === 'leaf')\n  const dodatki = bukiet.filter((b) => b.kind === 'extra')\n\n  const widziane = new Set()\n  let zaKwiaty = 0\n  let powtorki = 0\n  for (const b of kwiaty) {\n    if (widziane.has(b.id)) {\n      zaKwiaty += 1\n      powtorki += 1\n    } else {\n      widziane.add(b.id)\n      zaKwiaty += BY_ID.flower[b.id]?.wartosc ?? 1\n    }\n  }\n\n  const gatunki = widziane.size\n  const zaRoznorodnosc = gatunki\n  const zaLiscie = new Set(liscie.map((b) => b.id)).size\n  const zaDodatki = [...new Set(dodatki.map((b) => b.id))].reduce(\n    (suma, id) => suma + (BY_ID.extra[id]?.wartosc ?? 1),\n    0\n  )\n  const zaWazon = BY_ID.vase[vaseId]?.bonus ?? 0\n\n  return {\n    zaKwiaty,\n    powtorki,\n    zaLiscie,\n    zaDodatki,\n    gatunki,\n    zaRoznorodnosc,\n    zaWazon,\n    razem: zaKwiaty + zaLiscie + zaDodatki + zaRoznorodnosc + zaWazon,\n    mozna: kwiaty.length >= 3,\n    liczbaKwiatow: kwiaty.length,\n  }\n}\n", "src/sound.js": "// Krotkie efekty dzwiekowe generowane w WebAudio - zero plikow mp3 do pobrania.\nlet ctx = null\nlet wlaczony = true\n\nfunction audio() {\n  if (typeof window === 'undefined') return null\n  if (!ctx) {\n    const AC = window.AudioContext || window.webkitAudioContext\n    if (!AC) return null\n    ctx = new AC()\n  }\n  if (ctx.state === 'suspended') ctx.resume()\n  return ctx\n}\n\nfunction ton(freq, start, dur, gain = 0.16, typ = 'sine') {\n  const ac = audio()\n  if (!ac) return\n  const o = ac.createOscillator()\n  const g = ac.createGain()\n  o.type = typ\n  o.frequency.setValueAtTime(freq, ac.currentTime + start)\n  g.gain.setValueAtTime(0, ac.currentTime + start)\n  g.gain.linearRampToValueAtTime(gain, ac.currentTime + start + 0.012)\n  g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + start + dur)\n  o.connect(g).connect(ac.destination)\n  o.start(ac.currentTime + start)\n  o.stop(ac.currentTime + start + dur + 0.02)\n}\n\nexport const dzwiek = {\n  ustawWlaczony(v) { wlaczony = v },\n  czyWlaczony() { return wlaczony },\n  klik() { if (wlaczony) ton(880, 0, 0.09, 0.1, 'triangle') },\n  polozenie() { if (wlaczony) { ton(660, 0, 0.09, 0.09, 'sine'); ton(990, 0.05, 0.1, 0.07, 'sine') } },\n  kosz() { if (wlaczony) { ton(300, 0, 0.09, 0.12, 'sawtooth'); ton(180, 0.07, 0.14, 0.1, 'sawtooth') } },\n  sprzedaz() {\n    if (!wlaczony) return\n    ;[523.25, 659.25, 783.99, 1046.5].forEach((f, i) => ton(f, i * 0.085, 0.28, 0.14, 'triangle'))\n  },\n  zapis() { if (wlaczony) { ton(587.33, 0, 0.15, 0.12, 'sine'); ton(880, 0.1, 0.22, 0.11, 'sine') } },\n  zakup() { if (wlaczony) { ton(784, 0, 0.12, 0.13, 'square'); ton(1046.5, 0.09, 0.2, 0.1, 'triangle') } },\n  blad() { if (wlaczony) ton(220, 0, 0.18, 0.1, 'square') },\n}\n", "src/art/flowers.jsx": "// Glowki kwiatow rysowane jako SVG w kodzie.\n// Kazdy ksztalt dostaje wyliczona palete odcieni (c) i rysuje sie w ukladzie 100x100,\n// srodek kwiatu = punkt (50,50). Dzieki temu zmiana koloru = jeden props, bez podmiany plikow.\nimport React from 'react'\nimport { palette } from '../data/colors'\n\nconst GOLD = '#f9c74f'\nconst GOLD_D = '#f3a712'\nconst DARK = '#5a3d52'\n\n// N platkow rozlozonych w kole wokol (50,50)\nconst ring = (n, render, start = 0) =>\n  Array.from({ length: n }, (_, i) => (\n    <g key={i} transform={`rotate(${start + (i * 360) / n} 50 50)`}>{render(i)}</g>\n  ))\n\n// Maly kwiatuszek (uzywany w baldachach: hortensja, werbena, gipsowka, iberis...)\nconst floret = (cx, cy, r, n, fill, center, key) => (\n  <g key={key}>\n    {Array.from({ length: n }, (_, i) => (\n      <ellipse\n        key={i}\n        cx={cx}\n        cy={cy - r * 0.6}\n        rx={r * 0.46}\n        ry={r * 0.62}\n        fill={fill}\n        transform={`rotate(${(i * 360) / n + (key || 0) * 11} ${cx} ${cy})`}\n      />\n    ))}\n    {center && <circle cx={cx} cy={cy} r={r * 0.3} fill={center} />}\n  </g>\n)\n\nconst SHAPES = {\n  roza: (c) => (\n    <g>\n      {ring(7, () => <circle cx=\"50\" cy=\"30\" r=\"15\" fill={c.base} />)}\n      {ring(6, () => <circle cx=\"50\" cy=\"37\" r=\"12.5\" fill={c.light} />, 26)}\n      <circle cx=\"50\" cy=\"50\" r=\"20\" fill={c.base} />\n      <path\n        d=\"M50 50 C56 50 58 43 52 40 C44 36 38 45 42 53 C47 63 60 60 63 50 C67 37 54 28 42 32 C28 37 24 54 32 65\"\n        fill=\"none\"\n        stroke={c.deep}\n        strokeWidth=\"4\"\n        strokeLinecap=\"round\"\n      />\n    </g>\n  ),\n\n  rumianek: (c) => (\n    <g>\n      {ring(16, () => <ellipse cx=\"50\" cy=\"24\" rx=\"4\" ry=\"19\" fill={c.base} />)}\n      {ring(16, () => <ellipse cx=\"50\" cy=\"29\" rx=\"2.6\" ry=\"14\" fill={c.light} />, 11)}\n      <circle cx=\"50\" cy=\"50\" r=\"11\" fill={GOLD} />\n      <circle cx=\"50\" cy=\"50\" r=\"6.5\" fill={GOLD_D} />\n    </g>\n  ),\n\n  tulipan: (c) => (\n    <g>\n      <path d=\"M50 76 C40 74 29 62 27 46 C25 32 32 22 38 25 C44 28 45 50 50 76Z\" fill={c.dark} />\n      <path d=\"M50 76 C60 74 71 62 73 46 C75 32 68 22 62 25 C56 28 55 50 50 76Z\" fill={c.light} />\n      <path d=\"M50 20 C61 20 67 33 65 49 C63 64 57 77 50 77 C43 77 37 64 35 49 C33 33 39 20 50 20Z\" fill={c.base} />\n      <path d=\"M50 24 C55 30 56 44 53 60\" fill=\"none\" stroke={c.deep} strokeWidth=\"2.5\" strokeLinecap=\"round\" opacity=\"0.6\" />\n    </g>\n  ),\n\n  hortensja: (c) => (\n    <g>\n      <circle cx=\"50\" cy=\"50\" r=\"34\" fill={c.deep} opacity=\"0.28\" />\n      {[\n        [50, 26, 12], [30, 36, 12], [70, 36, 12], [24, 57, 12], [76, 57, 12],\n        [38, 72, 12], [62, 72, 12], [50, 50, 13], [36, 52, 11], [64, 52, 11],\n      ].map(([x, y, r], i) => floret(x, y, r, 4, i % 3 === 0 ? c.light : i % 3 === 1 ? c.base : c.dark, GOLD, i))}\n    </g>\n  ),\n\n  lupinus: (c) => (\n    <g>\n      {Array.from({ length: 11 }, (_, i) => {\n        const y = 9 + i * 8.2\n        const w = 1.5 + i * 1.35\n        const r = 5.4 + i * 0.28\n        return (\n          <g key={i}>\n            <ellipse cx={50 - w} cy={y} rx={r * 1.25} ry={r} fill={i % 2 ? c.dark : c.base} transform={`rotate(-26 ${50 - w} ${y})`} />\n            <ellipse cx={50 + w} cy={y + 2} rx={r * 1.25} ry={r} fill={i % 2 ? c.base : c.light} transform={`rotate(26 ${50 + w} ${y + 2})`} />\n            <ellipse cx=\"50\" cy={y + 4} rx={r * 1.1} ry={r * 0.9} fill={i % 2 ? c.light : c.deep} />\n          </g>\n        )\n      })}\n      <ellipse cx=\"50\" cy=\"6\" rx=\"4.5\" ry=\"6\" fill={c.light} />\n    </g>\n  ),\n\n  gipsowka: (c) => (\n    <g>\n      <path d=\"M50 72 L50 20 M50 68 L30 48 M50 68 L70 48 M50 56 L36 30 M50 56 L64 30\"\n        fill=\"none\" stroke=\"#8aa17a\" strokeWidth=\"2\" strokeLinecap=\"round\" />\n      {[[30, 46, 9], [70, 46, 9], [36, 28, 8], [64, 28, 8], [50, 18, 9], [50, 58, 8], [42, 40, 7], [58, 40, 7], [22, 62, 7], [78, 62, 7]]\n        .map(([x, y, r], i) => floret(x, y, r, 5, i % 2 ? c.base : c.light, c.dark, i))}\n    </g>\n  ),\n\n  stokrotka: (c) => (\n    <g>\n      {ring(12, () => <ellipse cx=\"50\" cy=\"27\" rx=\"7.5\" ry=\"17\" fill={c.base} />)}\n      {ring(12, () => <ellipse cx=\"50\" cy=\"31\" rx=\"5\" ry=\"13\" fill={c.light} />, 15)}\n      <circle cx=\"50\" cy=\"50\" r=\"12\" fill={GOLD} />\n      <circle cx=\"50\" cy=\"50\" r=\"7\" fill={GOLD_D} />\n    </g>\n  ),\n\n  cynia: (c) => (\n    <g>\n      {ring(11, () => <ellipse cx=\"50\" cy=\"26\" rx=\"8\" ry=\"18\" fill={c.dark} />)}\n      {ring(11, () => <ellipse cx=\"50\" cy=\"33\" rx=\"7.5\" ry=\"15\" fill={c.base} />, 16)}\n      {ring(9, () => <ellipse cx=\"50\" cy=\"40\" rx=\"6\" ry=\"10\" fill={c.light} />, 8)}\n      <circle cx=\"50\" cy=\"50\" r=\"8.5\" fill={GOLD} />\n      {ring(8, () => <circle cx=\"50\" cy=\"44\" r=\"2.4\" fill={GOLD_D} />)}\n    </g>\n  ),\n\n  jasmin: (c) => (\n    <g>\n      <path d=\"M50 80 L50 62 M50 74 L32 56 M50 74 L68 56\" fill=\"none\" stroke=\"#7f9172\" strokeWidth=\"2.4\" strokeLinecap=\"round\" />\n      {[[32, 50, 17], [68, 50, 17], [50, 26, 19]].map(([x, y, r], i) => (\n        <g key={i}>\n          {Array.from({ length: 6 }, (_, j) => (\n            <ellipse key={j} cx={x} cy={y - r * 0.58} rx={r * 0.3} ry={r * 0.6} fill={j % 2 ? c.base : c.light}\n              transform={`rotate(${(j * 360) / 6 + i * 13} ${x} ${y})`} />\n          ))}\n          <circle cx={x} cy={y} r={r * 0.24} fill={GOLD} />\n        </g>\n      ))}\n    </g>\n  ),\n\n  antirrhinum: (c) => (\n    <g>\n      <path d=\"M50 88 L50 18\" fill=\"none\" stroke=\"#7f9172\" strokeWidth=\"2.6\" strokeLinecap=\"round\" />\n      {Array.from({ length: 5 }, (_, i) => {\n        const y = 18 + i * 17\n        const s = 0.62 + i * 0.11\n        const bok = i % 2 ? 1 : -1\n        return (\n          <g key={i} transform={`translate(${50 + bok * 11 * s} ${y}) scale(${s}) rotate(${bok * 20})`}>\n            {/* dolna warga - szeroka, ciemniejsza */}\n            <path d=\"M-20 0 C-24 16 -12 26 0 26 C12 26 24 16 20 0 Z\" fill={c.dark} />\n            {/* gardziel */}\n            <ellipse cx=\"0\" cy=\"2\" rx=\"13\" ry=\"9\" fill={c.deep} />\n            <ellipse cx=\"0\" cy=\"1\" rx=\"7\" ry=\"4.5\" fill={GOLD} />\n            {/* gorna warga - jasna, dwa platy */}\n            <path d=\"M-20 1 C-23 -14 -13 -24 -4 -22 C-1 -21 -1 -12 -2 1 Z\" fill={c.light} />\n            <path d=\"M20 1 C23 -14 13 -24 4 -22 C1 -21 1 -12 2 1 Z\" fill={c.base} />\n          </g>\n        )\n      })}\n      <ellipse cx=\"50\" cy=\"11\" rx=\"5\" ry=\"7\" fill={c.light} />\n    </g>\n  ),\n\n  polygonum: (c) => (\n    <g>\n      <path d=\"M49 92 C45 76 56 44 50 10\" fill=\"none\" stroke=\"#7f9172\" strokeWidth=\"2.8\" strokeLinecap=\"round\" />\n      {Array.from({ length: 16 }, (_, i) => {\n        const t = i / 15\n        // ta sama krzywa co lodyga - kwiatuszki siedza na niej\n        const y = 10 + t * 84\n        const x = 50 - 6 * Math.sin(t * Math.PI * 1.15) + (t > 0.55 ? (t - 0.55) * 10 : 0)\n        const r = 3.4 + t * 1.9\n        return (\n          <g key={i}>\n            <circle cx={x - r * 0.85} cy={y} r={r} fill={i % 2 ? c.base : c.light} />\n            <circle cx={x + r * 0.85} cy={y + 1.5} r={r} fill={i % 2 ? c.dark : c.base} />\n            <circle cx={x} cy={y + 2.6} r={r * 0.8} fill={i % 2 ? c.light : c.deep} />\n          </g>\n        )\n      })}\n    </g>\n  ),\n\n  narcyz: (c) => (\n    <g>\n      {ring(6, () => <ellipse cx=\"50\" cy=\"27\" rx=\"11\" ry=\"17\" fill={c.base} />)}\n      {ring(6, () => <ellipse cx=\"50\" cy=\"30\" rx=\"7\" ry=\"13\" fill={c.light} />, 30)}\n      <circle cx=\"50\" cy=\"50\" r=\"16\" fill={GOLD} />\n      <circle cx=\"50\" cy=\"50\" r=\"11.5\" fill={GOLD_D} />\n      <circle cx=\"50\" cy=\"50\" r=\"6.5\" fill=\"#e07a1f\" />\n    </g>\n  ),\n\n  godecja: (c) => (\n    <g>\n      {ring(4, () => <ellipse cx=\"50\" cy=\"30\" rx=\"19\" ry=\"21\" fill={c.base} />, 45)}\n      {ring(4, () => <ellipse cx=\"50\" cy=\"36\" rx=\"11\" ry=\"14\" fill={c.deep} opacity=\"0.55\" />, 45)}\n      <circle cx=\"50\" cy=\"50\" r=\"9\" fill={c.light} />\n      {ring(5, () => <ellipse cx=\"50\" cy=\"45\" rx=\"1.8\" ry=\"4\" fill={GOLD} />)}\n      <circle cx=\"50\" cy=\"50\" r=\"3.5\" fill={GOLD_D} />\n    </g>\n  ),\n\n  kosmos: (c) => (\n    <g>\n      {ring(8, () => (\n        <path d=\"M50 50 C36 42 33 22 41 12 L50 19 L59 12 C67 22 64 42 50 50Z\" fill={c.base} />\n      ))}\n      {ring(8, () => (\n        <path d=\"M50 50 C43 44 41 32 45 25 L50 29 L55 25 C59 32 57 44 50 50Z\" fill={c.light} opacity=\"0.75\" />\n      ))}\n      <circle cx=\"50\" cy=\"50\" r=\"10\" fill={GOLD} />\n      {ring(7, () => <circle cx=\"50\" cy=\"45\" r=\"2.2\" fill={GOLD_D} />)}\n    </g>\n  ),\n\n  brachycome: (c) => (\n    <g>\n      {ring(20, () => <ellipse cx=\"50\" cy=\"25\" rx=\"3.2\" ry=\"19\" fill={c.base} />)}\n      {ring(20, () => <ellipse cx=\"50\" cy=\"30\" rx=\"2\" ry=\"14\" fill={c.light} />, 9)}\n      <circle cx=\"50\" cy=\"50\" r=\"10\" fill={DARK} />\n      <circle cx=\"50\" cy=\"50\" r=\"6\" fill={GOLD_D} />\n    </g>\n  ),\n\n  frezja: (c) => (\n    <g>\n      <path d=\"M25 82 C27 70 34 52 56 34 C68 24 78 20 86 18\" fill=\"none\" stroke=\"#7f9172\" strokeWidth=\"3\" strokeLinecap=\"round\" />\n      {[[26, 74, -35, 1], [38, 56, -18, 0.95], [54, 42, 5, 0.9], [70, 30, 25, 0.8], [84, 22, 45, 0.62]].map(([x, y, r, s], i) => (\n        <g key={i} transform={`translate(${x} ${y}) rotate(${r}) scale(${s})`}>\n          <path d=\"M0 4 C-4 -6 -12 -11 -13 -19 C-14 -27 -7 -31 0 -31 C7 -31 14 -27 13 -19 C12 -11 4 -6 0 4Z\" fill={i % 2 ? c.base : c.light} />\n          <ellipse cx=\"0\" cy=\"-28\" rx=\"13\" ry=\"7\" fill={c.dark} opacity=\"0.5\" />\n          <ellipse cx=\"0\" cy=\"-30\" rx=\"9\" ry=\"4.5\" fill={GOLD} opacity=\"0.8\" />\n        </g>\n      ))}\n    </g>\n  ),\n\n  bellis: (c) => (\n    <g>\n      {ring(22, () => <ellipse cx=\"50\" cy=\"26\" rx=\"3\" ry=\"18\" fill={c.base} />)}\n      {ring(18, () => <ellipse cx=\"50\" cy=\"32\" rx=\"2.6\" ry=\"13\" fill={c.light} />, 9)}\n      {ring(14, () => <ellipse cx=\"50\" cy=\"39\" rx=\"2.2\" ry=\"8\" fill={c.dark} />, 12)}\n      <circle cx=\"50\" cy=\"50\" r=\"8\" fill={GOLD} />\n      <circle cx=\"50\" cy=\"50\" r=\"4.5\" fill={GOLD_D} />\n    </g>\n  ),\n\n  viola: (c) => (\n    <g>\n      {/* dwa gorne platki - najciemniejsze */}\n      <ellipse cx=\"32\" cy=\"29\" rx=\"18\" ry=\"17\" fill={c.dark} transform=\"rotate(-16 32 29)\" />\n      <ellipse cx=\"68\" cy=\"29\" rx=\"18\" ry=\"17\" fill={c.dark} transform=\"rotate(16 68 29)\" />\n      {/* dwa boczne */}\n      <ellipse cx=\"23\" cy=\"55\" rx=\"19\" ry=\"17\" fill={c.base} transform=\"rotate(-22 23 55)\" />\n      <ellipse cx=\"77\" cy=\"55\" rx=\"19\" ry=\"17\" fill={c.base} transform=\"rotate(22 77 55)\" />\n      {/* duzy dolny - najjasniejszy */}\n      <ellipse cx=\"50\" cy=\"71\" rx=\"25\" ry=\"21\" fill={c.light} />\n      {/* ciemna \"buzia\" bratka - mala, zeby platki byly widoczne */}\n      <path d=\"M50 42 C60 42 65 54 60 65 C56 74 44 74 40 65 C35 54 40 42 50 42Z\" fill={c.deep} />\n      <circle cx=\"50\" cy=\"49\" r=\"8\" fill={GOLD} />\n      <circle cx=\"50\" cy=\"49\" r=\"4\" fill={GOLD_D} />\n      {[-24, 0, 24].map((a, i) => (\n        <path key={i} d=\"M50 54 L50 72\" stroke={c.line} strokeWidth=\"2.6\" strokeLinecap=\"round\"\n          transform={`rotate(${a} 50 54)`} />\n      ))}\n    </g>\n  ),\n\n  werbena: (c) => (\n    <g>\n      <circle cx=\"50\" cy=\"50\" r=\"33\" fill={c.deep} opacity=\"0.22\" />\n      {[[50, 24, 11], [27, 38, 11], [73, 38, 11], [27, 63, 11], [73, 63, 11], [50, 77, 11], [50, 50, 12]]\n        .map(([x, y, r], i) => floret(x, y, r, 5, i % 2 ? c.base : c.light, i % 2 ? '#fff8e7' : GOLD, i))}\n    </g>\n  ),\n\n  szafirek: (c) => (\n    <g>\n      {Array.from({ length: 9 }, (_, i) => {\n        const y = 11 + i * 9.4\n        const w = 1 + i * 1.5\n        const r = 4.6 + i * 0.42\n        return (\n          <g key={i}>\n            <circle cx={50 - w} cy={y} r={r} fill={i % 2 ? c.dark : c.base} />\n            <circle cx={50 + w} cy={y + 3} r={r} fill={i % 2 ? c.base : c.light} />\n            <circle cx=\"50\" cy={y + 5} r={r * 0.92} fill={i % 2 ? c.light : c.deep} />\n            <ellipse cx={50 - w} cy={y + r * 0.55} rx={r * 0.5} ry={r * 0.26} fill=\"#fff\" opacity=\"0.5\" />\n          </g>\n        )\n      })}\n      <circle cx=\"50\" cy=\"6\" r=\"3.6\" fill={c.light} />\n    </g>\n  ),\n\n  iberis: (c) => (\n    <g>\n      <path d=\"M50 74 L50 62\" fill=\"none\" stroke=\"#7f9172\" strokeWidth=\"3\" strokeLinecap=\"round\" />\n      {[[24, 40, 11], [40, 30, 11], [58, 28, 11], [75, 38, 11], [32, 54, 11], [50, 47, 12], [68, 54, 11], [42, 66, 10], [60, 66, 10]]\n        .map(([x, y, r], i) => floret(x, y, r, 4, i % 2 ? c.base : c.light, c.dark, i))}\n    </g>\n  ),\n\n  // Nagroda koncowa - gesta, wielowarstwowa piwonia\n  piwonia: (c) => (\n    <g>\n      {ring(9, () => <ellipse cx=\"50\" cy=\"24\" rx=\"14.5\" ry=\"19\" fill={c.deep} />)}\n      {ring(9, () => <ellipse cx=\"50\" cy=\"29\" rx=\"13\" ry=\"16\" fill={c.dark} />, 20)}\n      {ring(9, () => <ellipse cx=\"50\" cy=\"35\" rx=\"11.5\" ry=\"13\" fill={c.base} />, 10)}\n      {ring(8, () => <ellipse cx=\"50\" cy=\"40\" rx=\"9.5\" ry=\"10.5\" fill={c.light} />, 24)}\n      {ring(7, () => <ellipse cx=\"50\" cy=\"44\" rx=\"7.5\" ry=\"8\" fill={c.base} />, 12)}\n      {ring(6, () => <ellipse cx=\"50\" cy=\"47\" rx=\"5.5\" ry=\"6\" fill={c.dark} />, 28)}\n      <circle cx=\"50\" cy=\"50\" r=\"7.5\" fill={GOLD} />\n      {ring(10, () => <circle cx=\"50\" cy=\"45.5\" r=\"1.7\" fill={GOLD_D} />)}\n      <circle cx=\"50\" cy=\"50\" r=\"3.2\" fill={GOLD_D} />\n    </g>\n  ),\n\n  nicotiana: (c) => (\n    <g>\n      {ring(5, () => <path d=\"M50 50 L41 24 L50 8 L59 24 Z\" fill={c.base} />)}\n      {ring(5, () => <path d=\"M50 50 L45 30 L50 18 L55 30 Z\" fill={c.light} />)}\n      <circle cx=\"50\" cy=\"50\" r=\"12\" fill={c.deep} />\n      <circle cx=\"50\" cy=\"50\" r=\"7\" fill={GOLD} />\n      <circle cx=\"50\" cy=\"50\" r=\"3.5\" fill={GOLD_D} />\n    </g>\n  ),\n}\n\nexport const FLOWER_IDS = Object.keys(SHAPES)\n\nexport function FlowerArt({ id, color = '#ff7aa2', size = 100, style }) {\n  const shape = SHAPES[id] || SHAPES.stokrotka\n  return (\n    <svg viewBox=\"0 0 100 100\" width={size} height={size} style={style} aria-hidden=\"true\">\n      {shape(palette(color))}\n    </svg>\n  )\n}\n", "src/art/leaves.jsx": "// Liscie i zielen - rysowane jako SVG, srodek galazki w punkcie (50,50).\nimport React from 'react'\nimport { palette } from '../data/colors'\n\nconst SHAPES = {\n  eukaliptus: (c) => (\n    <g>\n      {/* dluga lodyga - dolny odcinek celowo bez lisci */}\n      <path d=\"M50 99 C46 76 54 50 50 5\" fill=\"none\" stroke={c.deep} strokeWidth=\"3\" strokeLinecap=\"round\" />\n      {Array.from({ length: 9 }, (_, i) => {\n        const y = 10 + i * 6.4\n        const side = i % 2 ? 1 : -1\n        const r = 5.4 + i * 0.62\n        const x = 50 + side * (6 + i * 0.8)\n        return (\n          <g key={i}>\n            <path d={`M50 ${y + 2} L${x} ${y}`} stroke={c.deep} strokeWidth=\"1.8\" strokeLinecap=\"round\" />\n            <ellipse cx={x + side * r * 0.75} cy={y} rx={r} ry={r * 0.86} fill={i % 2 ? c.base : c.light} />\n          </g>\n        )\n      })}\n      <ellipse cx=\"50\" cy=\"7\" rx=\"5.4\" ry=\"5.4\" fill={c.light} />\n    </g>\n  ),\n\n  // Zwykly listek - najprostsza zielen, dostepna od poczatku\n  listek: (c) => (\n    <g>\n      <path d=\"M50 98 C48 90 49 84 50 80\" fill=\"none\" stroke={c.deep} strokeWidth=\"3\" strokeLinecap=\"round\" />\n      <path d=\"M50 6 C66 20 73 40 68 58 C64 72 55 80 50 84 C45 80 36 72 32 58 C27 40 34 20 50 6Z\" fill={c.base} />\n      <path d=\"M50 6 C66 20 73 40 68 58 C64 72 55 80 50 84 Z\" fill={c.dark} />\n      <path d=\"M50 10 L50 82\" stroke={c.deep} strokeWidth=\"2.2\" strokeLinecap=\"round\" />\n      {[22, 34, 46, 58, 68].map((y, i) => (\n        <g key={y}>\n          <path d={`M50 ${y} C${44 - i} ${y + 3} ${39 - i} ${y + 7} ${36 - i * 0.6} ${y + 12}`}\n            fill=\"none\" stroke={c.deep} strokeWidth=\"1.3\" opacity=\"0.55\" strokeLinecap=\"round\" />\n          <path d={`M50 ${y} C${56 + i} ${y + 3} ${61 + i} ${y + 7} ${64 + i * 0.6} ${y + 12}`}\n            fill=\"none\" stroke={c.line} strokeWidth=\"1.3\" opacity=\"0.45\" strokeLinecap=\"round\" />\n        </g>\n      ))}\n    </g>\n  ),\n\n\n  // Dlugie, trawiaste zdzbla - wysoka zielen do \"rozciagniecia\" bukietu\n  zdzbla: (c) => {\n    const zdzblo = (dx, top, gr, fill, key) => {\n      const h = 99 - top\n      return (\n        <path\n          key={key}\n          d={`M50 99\n              C${(50 + dx * 0.12).toFixed(1)} ${(99 - h * 0.42).toFixed(1)}\n                ${(50 + dx * 0.58).toFixed(1)} ${(99 - h * 0.74).toFixed(1)}\n                ${(50 + dx).toFixed(1)} ${top}\n              C${(50 + dx * 0.52 + gr).toFixed(1)} ${(99 - h * 0.7).toFixed(1)}\n                ${(50 + dx * 0.1 + gr).toFixed(1)} ${(99 - h * 0.4).toFixed(1)}\n                ${(50 + gr * 0.8).toFixed(1)} 99 Z`}\n          fill={fill}\n        />\n      )\n    }\n    const odcienie = [c.dark, c.base, c.light, c.base, c.dark, c.light]\n    return (\n      <g>\n        {[[-27, 12, 3.0], [-15, 4, 3.4], [-5, 8, 3.2], [7, 2, 3.4], [19, 7, 3.0], [30, 18, 2.6]].map(\n          ([dx, top, gr], i) => zdzblo(dx, top, gr, odcienie[i], i)\n        )}\n      </g>\n    )\n  },\n\n  paproc: (c) => (\n    <g>\n      <path d=\"M50 99 C47 74 53 44 50 6\" fill=\"none\" stroke={c.deep} strokeWidth=\"2.4\" strokeLinecap=\"round\" />\n      {Array.from({ length: 10 }, (_, i) => {\n        const y = 10 + i * 9.2\n        const len = 7 + i * 3.4\n        const opad = 4 + i * 0.6\n        return (\n          <g key={i}>\n            <path\n              d={`M50 ${y} C${50 - len * 0.45} ${y - 2} ${50 - len} ${y + opad * 0.4} ${50 - len} ${y + opad}\n                  C${50 - len * 0.55} ${y + opad * 0.9} ${50 - len * 0.2} ${y + opad * 0.6} 50 ${y}Z`}\n              fill={i % 2 ? c.base : c.light}\n            />\n            <path\n              d={`M50 ${y + 3} C${50 + len * 0.45} ${y + 1} ${50 + len} ${y + 3 + opad * 0.4} ${50 + len} ${y + 3 + opad}\n                  C${50 + len * 0.55} ${y + 3 + opad * 0.9} ${50 + len * 0.2} ${y + 3 + opad * 0.6} 50 ${y + 3}Z`}\n              fill={i % 2 ? c.dark : c.base}\n            />\n          </g>\n        )\n      })}\n    </g>\n  ),\n\n  ruskus: (c) => (\n    <g>\n      <path d=\"M50 99 L50 8\" fill=\"none\" stroke={c.deep} strokeWidth=\"2.8\" strokeLinecap=\"round\" />\n      {Array.from({ length: 8 }, (_, i) => {\n        const y = 14 + i * 10.5\n        const side = i % 2 ? 1 : -1\n        const len = 14 + i * 1.8\n        return (\n          <path\n            key={i}\n            d={`M50 ${y + 4} C${50 + side * len * 0.4} ${y - 6} ${50 + side * len} ${y - 5} ${50 + side * len} ${y + 3}\n                C${50 + side * len} ${y + 10} ${50 + side * len * 0.4} ${y + 11} 50 ${y + 4}Z`}\n            fill={i % 2 ? c.base : c.light}\n          />\n        )\n      })}\n      <path d=\"M50 14 C44 4 56 4 50 14Z\" fill={c.light} />\n    </g>\n  ),\n\n  bluszcz: (c) => (\n    <g>\n      <path d=\"M50 99 C58 76 42 54 50 6\" fill=\"none\" stroke={c.deep} strokeWidth=\"2.6\" strokeLinecap=\"round\" />\n      {[[30, 20, -25], [70, 34, 25], [28, 50, -20], [72, 64, 22], [38, 80, -18], [50, 8, 0]].map(([x, y, rot], i) => (\n        <g key={i} transform={`translate(${x} ${y}) rotate(${rot}) scale(${0.9 + (i % 3) * 0.12})`}>\n          <path d=\"M0 12 C-13 8 -16 -2 -10 -8 C-6 -12 -2 -9 0 -6 C2 -9 6 -12 10 -8 C16 -2 13 8 0 12Z\"\n            fill={i % 2 ? c.base : c.light} />\n        </g>\n      ))}\n    </g>\n  ),\n\n  trawa: (c) => (\n    <g>\n      {[[-30, 26], [-15, 34], [0, 40], [15, 34], [30, 26]].map(([rot, len], i) => (\n        <path\n          key={i}\n          d={`M50 96 C${50 + rot * 0.3} ${96 - len} ${50 + rot * 0.9} ${70 - len} ${50 + rot * 1.4} ${58 - len}`}\n          fill=\"none\"\n          stroke={i % 2 ? c.base : c.light}\n          strokeWidth=\"4\"\n          strokeLinecap=\"round\"\n        />\n      ))}\n      {[[22, 24], [78, 24], [50, 12]].map(([x, y], i) => (\n        <ellipse key={i} cx={x} cy={y} rx=\"5\" ry=\"9\" fill={c.dark} opacity=\"0.8\" transform={`rotate(${(i - 1) * 18} ${x} ${y})`} />\n      ))}\n    </g>\n  ),\n}\n\nexport const LEAF_IDS = Object.keys(SHAPES)\n\nexport function LeafArt({ id, color = '#40916c', size = 100, style }) {\n  const shape = SHAPES[id] || SHAPES.eukaliptus\n  return (\n    <svg viewBox=\"0 0 100 100\" width={size} height={size} style={style} aria-hidden=\"true\">\n      {shape(palette(color))}\n    </svg>\n  )\n}\n", "src/art/extras.jsx": "// Dodatki: wstazki, kokardy, drobiazgi. Rysowane wokol punktu (50,50).\nimport React from 'react'\nimport { palette } from '../data/colors'\n\nconst SHAPES = {\n  kokarda: (c) => (\n    <g>\n      <path d=\"M50 50 C34 30 8 32 10 48 C12 64 36 62 50 50Z\" fill={c.base} />\n      <path d=\"M50 50 C66 30 92 32 90 48 C88 64 64 62 50 50Z\" fill={c.base} />\n      <path d=\"M50 50 C36 34 14 36 13 47 C22 40 38 42 50 50Z\" fill={c.light} />\n      <path d=\"M50 50 C64 34 86 36 87 47 C78 40 62 42 50 50Z\" fill={c.light} />\n      <path d=\"M44 54 L30 88 L44 82 L48 92 Z\" fill={c.dark} />\n      <path d=\"M56 54 L70 88 L56 82 L52 92 Z\" fill={c.dark} />\n      <ellipse cx=\"50\" cy=\"50\" rx=\"10\" ry=\"9\" fill={c.deep} />\n    </g>\n  ),\n\n  wstazka: (c) => (\n    <g>\n      <path d=\"M4 42 C26 28 74 28 96 42 L96 58 C74 44 26 44 4 58 Z\" fill={c.base} />\n      <path d=\"M4 42 C26 28 74 28 96 42 L96 48 C74 34 26 34 4 48 Z\" fill={c.light} />\n      <path d=\"M40 44 L28 26 L50 40 L72 26 L60 44 Z\" fill={c.dark} />\n    </g>\n  ),\n\n  drut: (c) => (\n    <g>\n      <path d=\"M6 78 C22 46 34 92 48 56 C60 26 70 78 84 44 C90 30 94 34 96 30\"\n        fill=\"none\" stroke={c.base} strokeWidth=\"4\" strokeLinecap=\"round\" />\n      {[[20, 62], [46, 60], [72, 56], [92, 32]].map(([x, y], i) => (\n        <circle key={i} cx={x} cy={y} r=\"4.5\" fill={c.light} />\n      ))}\n    </g>\n  ),\n\n  perelki: (c) => (\n    <g>\n      {[[10, 60], [24, 48], [39, 42], [55, 44], [70, 52], [84, 64], [30, 68], [62, 70]].map(([x, y], i) => (\n        <g key={i}>\n          <circle cx={x} cy={y} r={5.5 - (i % 3) * 0.8} fill={c.base} />\n          <circle cx={x - 1.6} cy={y - 1.6} r=\"1.8\" fill=\"#fff\" opacity=\"0.8\" />\n        </g>\n      ))}\n      <path d=\"M10 60 C24 44 70 44 84 64\" fill=\"none\" stroke={c.dark} strokeWidth=\"1.6\" opacity=\"0.6\" />\n    </g>\n  ),\n\n  motylek: (c) => (\n    <g>\n      <path d=\"M50 52 C30 22 6 26 10 46 C13 62 36 62 50 52Z\" fill={c.base} />\n      <path d=\"M50 52 C70 22 94 26 90 46 C87 62 64 62 50 52Z\" fill={c.base} />\n      <path d=\"M50 54 C34 52 16 60 22 76 C28 90 46 76 50 54Z\" fill={c.light} />\n      <path d=\"M50 54 C66 52 84 60 78 76 C72 90 54 76 50 54Z\" fill={c.light} />\n      <ellipse cx=\"26\" cy=\"42\" rx=\"5\" ry=\"4\" fill={c.deep} />\n      <ellipse cx=\"74\" cy=\"42\" rx=\"5\" ry=\"4\" fill={c.deep} />\n      <ellipse cx=\"50\" cy=\"58\" rx=\"4\" ry=\"16\" fill=\"#4a3b46\" />\n      <path d=\"M48 44 C42 30 38 26 34 24 M52 44 C58 30 62 26 66 24\"\n        fill=\"none\" stroke=\"#4a3b46\" strokeWidth=\"2\" strokeLinecap=\"round\" />\n    </g>\n  ),\n\n  biedronka: (c) => (\n    <g>\n      <ellipse cx=\"50\" cy=\"56\" rx=\"30\" ry=\"26\" fill={c.base} />\n      <path d=\"M50 30 C34 30 20 42 20 56 C20 70 34 82 50 82 Z\" fill={c.dark} />\n      <circle cx=\"50\" cy=\"34\" r=\"14\" fill=\"#3b3238\" />\n      <circle cx=\"45\" cy=\"31\" r=\"3\" fill=\"#fff\" />\n      <circle cx=\"55\" cy=\"31\" r=\"3\" fill=\"#fff\" />\n      <path d=\"M50 32 L50 82\" stroke=\"#3b3238\" strokeWidth=\"3\" />\n      {[[36, 48], [64, 48], [34, 66], [66, 66], [50, 72]].map(([x, y], i) => (\n        <circle key={i} cx={x} cy={y} r=\"5\" fill=\"#3b3238\" />\n      ))}\n    </g>\n  ),\n\n  serduszko: (c) => (\n    <g>\n      <path d=\"M50 86 C18 64 12 44 22 32 C33 19 46 26 50 38 C54 26 67 19 78 32 C88 44 82 64 50 86Z\" fill={c.base} />\n      <path d=\"M32 34 C26 38 24 46 28 54\" fill=\"none\" stroke=\"#fff\" strokeWidth=\"4\" strokeLinecap=\"round\" opacity=\"0.55\" />\n    </g>\n  ),\n\n  gwiazdka_ozdoba: (c) => (\n    <g>\n      <path d=\"M50 12 L60 40 L90 42 L66 60 L74 88 L50 71 L26 88 L34 60 L10 42 L40 40 Z\" fill={c.base} />\n      <path d=\"M50 24 L57 43 L76 45 L61 56 L50 50 Z\" fill={c.light} />\n    </g>\n  ),\n}\n\nexport const EXTRA_IDS = Object.keys(SHAPES)\n\nexport function ExtraArt({ id, color = '#e63946', size = 100, style }) {\n  const shape = SHAPES[id] || SHAPES.kokarda\n  return (\n    <svg viewBox=\"0 0 100 100\" width={size} height={size} style={style} aria-hidden=\"true\">\n      {shape(palette(color))}\n    </svg>\n  )\n}\n", "src/art/vases.jsx": "// Wazony i opakowania.\n// Kazdy wazon opisuje wlasny ksztalt (SVG) ORAZ geometrie bukietu:\n//  - box    : gdzie wazon lezy na scenie (procenty sceny, scena jest kwadratem)\n//  - mouth  : punkt zbiegu lodyg (wylot wazonu)\n//  - spread : promienie kopuly, w ktorej lapia sie kwiaty\n//  - capacity: ile punktow kotwiczacych generujemy\nimport React from 'react'\nimport { palette } from '../data/colors'\n\nconst shine = (o = 0.35) => <ellipse cx=\"34\" cy=\"52\" rx=\"7\" ry=\"18\" fill=\"#fff\" opacity={o} transform=\"rotate(-12 34 52)\" />\n\nexport const VASES = {\n  wazon_kula: {\n    otworY: 12.5,\n    dnoArt: 50,\n    name: 'Okrągły wazon',\n    box: { x: 30, y: 43.4, size: 40 },\n    mouthArt: { x: 50, y: 12 },\n    spread: { rx: 27, ry: 33 },\n    capacity: 13,\n    defaultColor: '#a8dadc',\n    art: (c) => (\n      <g>\n        <path d=\"M34 12 L39 34 C15 46 14 80 50 94 C86 80 85 46 61 34 L66 12 Z\" fill={c.base} />\n        <path d=\"M50 94 C86 80 85 46 61 34 L58 20 C64 44 78 62 62 82 C57 88 54 91 50 94Z\" fill={c.dark} />\n        {shine()}\n        <ellipse cx=\"50\" cy=\"12\" rx=\"16.5\" ry=\"5.5\" fill={c.light} />\n        <ellipse cx=\"50\" cy=\"12.5\" rx=\"12\" ry=\"3.6\" fill={c.deep} />\n      </g>\n    ),\n  },\n\n  wazon_smukly: {\n    otworY: 8.5,\n    dnoArt: 44,\n    name: 'Smukły wazon',\n    box: { x: 29, y: 41.1, size: 42 },\n    mouthArt: { x: 50, y: 8 },\n    spread: { rx: 25, ry: 31 },\n    capacity: 10,\n    defaultColor: '#457b9d',\n    art: (c) => (\n      <g>\n        <path d=\"M32 8 L38 44 C30 64 33 84 50 95 C67 84 70 64 62 44 L68 8 Z\" fill={c.base} />\n        <path d=\"M50 95 C67 84 70 64 62 44 L58 16 C62 48 72 66 58 86 C55 90 52 93 50 95Z\" fill={c.dark} />\n        {shine(0.3)}\n        <ellipse cx=\"50\" cy=\"8\" rx=\"18\" ry=\"5.5\" fill={c.light} />\n        <ellipse cx=\"50\" cy=\"8.5\" rx=\"13\" ry=\"3.6\" fill={c.deep} />\n      </g>\n    ),\n  },\n\n  dzbanek: {\n    otworY: 12.5,\n    dnoArt: 48,\n    name: 'Dzbanek',\n    box: { x: 29, y: 41.5, size: 42 },\n    mouthArt: { x: 48, y: 12 },\n    spread: { rx: 26, ry: 32 },\n    capacity: 12,\n    defaultColor: '#e5989b',\n    art: (c) => (\n      <g>\n        <path d=\"M66 26 C90 26 92 62 66 66\" fill=\"none\" stroke={c.dark} strokeWidth=\"9\" strokeLinecap=\"round\" />\n        <path d=\"M28 12 L27 32 C17 48 20 82 48 94 C76 82 79 48 69 32 L68 12 Z\" fill={c.base} />\n        <path d=\"M48 94 C76 82 79 48 69 32 L67 18 C71 46 80 66 60 86 C55 90 51 92 48 94Z\" fill={c.dark} />\n        {shine(0.3)}\n        <ellipse cx=\"48\" cy=\"12\" rx=\"20.5\" ry=\"6\" fill={c.light} />\n        <ellipse cx=\"48\" cy=\"12.5\" rx=\"15\" ry=\"4\" fill={c.deep} />\n      </g>\n    ),\n  },\n\n  doniczka: {\n    otworY: 15,\n    dnoArt: 48,\n    name: 'Doniczka',\n    box: { x: 30, y: 43, size: 40 },\n    mouthArt: { x: 50, y: 10 },\n    spread: { rx: 27, ry: 31 },\n    capacity: 11,\n    defaultColor: '#c98b6b',\n    art: (c) => (\n      <g>\n        <path d=\"M20 26 L30 88 C32 95 68 95 70 88 L80 26 Z\" fill={c.base} />\n        <path d=\"M50 95 C62 95 69 93 70 88 L80 26 L62 26 L58 92 C56 94 53 95 50 95Z\" fill={c.dark} />\n        <rect x=\"14\" y=\"10\" width=\"72\" height=\"18\" rx=\"7\" fill={c.light} />\n        <rect x=\"14\" y=\"10\" width=\"72\" height=\"7\" rx=\"3.5\" fill={c.deep} opacity=\"0.5\" />\n      </g>\n    ),\n  },\n\n  sloik: {\n    otworY: 11,\n    dnoArt: 47,\n    name: 'Słoik ze wstążką',\n    box: { x: 31, y: 44.5, size: 38 },\n    mouthArt: { x: 50, y: 8 },\n    spread: { rx: 25, ry: 31 },\n    capacity: 10,\n    defaultColor: '#b7e4c7',\n    art: (c) => (\n      <g>\n        <path d=\"M26 10 L26 30 C20 40 20 84 26 90 C34 96 66 96 74 90 C80 84 80 40 74 30 L74 10 Z\" fill={c.base} opacity=\"0.9\" />\n        <path d=\"M74 30 C80 40 80 84 74 90 C70 93 62 95 54 95 L54 12 L74 10Z\" fill={c.dark} opacity=\"0.75\" />\n        {shine(0.45)}\n        <rect x=\"24\" y=\"8\" width=\"52\" height=\"7\" rx=\"3.5\" fill={c.light} />\n        <path d=\"M18 56 C34 50 66 50 82 56 L82 66 C66 60 34 60 18 66 Z\" fill=\"#e63946\" />\n        <path d=\"M44 58 L34 48 L50 56 L66 48 L56 58 Z\" fill=\"#c1121f\" />\n      </g>\n    ),\n  },\n\n  papier: {\n    otworY: 17,\n    dnoArt: 80,\n    name: 'Papier ozdobny',\n    box: { x: 27, y: 37.8, size: 46 },\n    mouthArt: { x: 50, y: 17 },\n    spread: { rx: 30, ry: 27 },\n    capacity: 14,\n    defaultColor: '#e8c4b0',\n    art: (c) => (\n      <g>\n        {/* sylwetka stozka - gorna krawedz to tylny rant, widoczny za kwiatami */}\n        <path d=\"M12 17 A38 9 0 0 0 88 17 L56 84 C53 87 47 87 44 84 Z\" fill={c.deep} />\n        {/* przednia powierzchnia papieru */}\n        <path d=\"M12 17 A38 9 0 0 1 88 17 L56 84 C53 87 47 87 44 84 Z\" fill={c.base} />\n        {/* prawa strona ciemniejsza */}\n        <path d=\"M88 17 A38 9 0 0 1 50 26 L50 86 C53 86 55 85 56 84 Z\" fill={c.dark} />\n        {/* zalamania papieru zbiegajace sie do przewiazania */}\n        <path d=\"M26 22 L47 83 M50 26 L50 86 M74 22 L53 83\"\n          stroke={c.deep} strokeWidth=\"1.1\" opacity=\"0.35\" fill=\"none\" />\n        {/* sznurek - papier scisniety u dolu */}\n        <path d=\"M39 72 C44 76 56 76 61 72 M40 77 C45 81 55 81 60 77\"\n          stroke=\"#9c7a56\" strokeWidth=\"2.4\" fill=\"none\" strokeLinecap=\"round\" />\n        <path d=\"M46 80 L39 90 M54 80 L61 90\"\n          stroke=\"#9c7a56\" strokeWidth=\"1.7\" fill=\"none\" strokeLinecap=\"round\" />\n      </g>\n    ),\n  },\n\n  folia: {\n    otworY: 15,\n    dnoArt: 80,\n    name: 'Folia',\n    box: { x: 26, y: 36, size: 48 },\n    mouthArt: { x: 50, y: 15 },\n    spread: { rx: 31, ry: 26 },\n    capacity: 15,\n    defaultColor: '#f1faee',\n    art: (c) => (\n      <g>\n        <path d=\"M11 15 A39 9 0 0 0 89 15 L56 84 C53 87 47 87 44 84 Z\" fill={c.dark} opacity=\"0.42\" />\n        <path d=\"M11 15 A39 9 0 0 1 89 15 L56 84 C53 87 47 87 44 84 Z\" fill={c.base} opacity=\"0.6\" />\n        <path d=\"M25 21 L47 83 M52 24 L52 86 M75 21 L54 83\"\n          stroke=\"#fff\" strokeWidth=\"1.7\" opacity=\"0.75\" fill=\"none\" />\n        <path d=\"M39 72 C44 76 56 76 61 72 M40 77 C45 81 55 81 60 77\"\n          stroke=\"#f0b429\" strokeWidth=\"2.6\" fill=\"none\" strokeLinecap=\"round\" />\n        <path d=\"M46 80 L39 90 M54 80 L61 90\"\n          stroke=\"#f0b429\" strokeWidth=\"1.9\" fill=\"none\" strokeLinecap=\"round\" />\n      </g>\n    ),\n  },\n\n  koszyk: {\n    otworY: 27,\n    dnoArt: 59,\n    name: 'Koszyk',\n    box: { x: 27, y: 37.8, size: 46 },\n    mouthArt: { x: 50, y: 26 },\n    spread: { rx: 29, ry: 33 },\n    capacity: 14,\n    defaultColor: '#d9a066',\n    art: (c) => (\n      <g>\n        <path d=\"M22 26 C22 4 78 4 78 26\" fill=\"none\" stroke={c.dark} strokeWidth=\"7\" strokeLinecap=\"round\" />\n        <path d=\"M12 28 L24 88 C26 94 74 94 76 88 L88 28 Z\" fill={c.base} />\n        <path d=\"M50 94 C64 94 74 93 76 88 L88 28 L66 28 L58 92 C56 93 53 94 50 94Z\" fill={c.dark} />\n        {[38, 52, 66, 80].map((y) => (\n          <path key={y} d={`M${13 + (y - 28) * 0.16} ${y} L${87 - (y - 28) * 0.16} ${y}`} stroke={c.deep} strokeWidth=\"2.6\" opacity=\"0.55\" />\n        ))}\n        {[24, 38, 52, 66, 80].map((x) => (\n          <path key={x} d={`M${x} 28 L${x + (x - 50) * 0.22} 90`} stroke={c.deep} strokeWidth=\"2.2\" opacity=\"0.4\" />\n        ))}\n        <rect x=\"8\" y=\"22\" width=\"84\" height=\"10\" rx=\"5\" fill={c.light} />\n      </g>\n    ),\n  },\n}\n\n// Wylot wazonu w ukladzie sceny liczymy z pozycji na rysunku,\n// dzieki czemu lodygi zawsze trafiaja dokladnie w otwor - niezaleznie od rozmiaru wazonu.\nfor (const v of Object.values(VASES)) {\n  v.mouth = {\n    x: v.box.x + (v.mouthArt.x / 100) * v.box.size,\n    y: v.box.y + (v.mouthArt.y / 100) * v.box.size,\n  }\n  // punkt, w ktorym zbiegaja sie lodygi (dno wazonu / przewiazanie opakowania)\n  v.dno = v.box.y + (v.dnoArt / 100) * v.box.size\n}\n\nexport const VASE_IDS = Object.keys(VASES)\n\n// Kopula punktow kotwiczacych: srodek wyzej, brzegi nizej i szerzej (jak prawdziwy bukiet).\nexport function anchorsFor(vaseId) {\n  const v = VASES[vaseId] || VASES.wazon_kula\n  const { mouth, spread, capacity } = v\n  const GOLDEN = 2.399963229728653\n  return Array.from({ length: capacity }, (_, i) => {\n    const t = (i + 0.5) / capacity\n    const r = Math.sqrt(t)\n    const a = i * GOLDEN\n    return {\n      x: mouth.x + Math.cos(a) * r * spread.rx,\n      // srodek bukietu najwyzej, brzegi schodza tuz nad kant wazonu (0.30 * ry),\n      // dzieki czemu kwiaty siedza W wazonie, a nie wisza nad nim\n      y: mouth.y - spread.ry * (0.3 + 0.7 * (1 - r)),\n    }\n  })\n}\n\n// Wazon rysujemy DWA razy: raz caly (za lodygami) i raz sama jego przednia polowa\n// (przed lodygami). Dzieki temu tyl i wnetrze wazonu sa z tylu, a lodygi widac,\n// jak wchodza w otwor - zamiast urywac sie na kancie.\nexport function VaseArt({ id, color, size = 100, style, tylko }) {\n  const v = VASES[id] || VASES.wazon_kula\n  const rysunek = v.art(palette(color || v.defaultColor))\n  if (tylko !== 'przod') {\n    return (\n      <svg viewBox=\"0 0 100 100\" width={size} height={size} style={style} aria-hidden=\"true\">\n        {rysunek}\n      </svg>\n    )\n  }\n  const clipId = `wazon-przod-${id}`\n  return (\n    <svg viewBox=\"0 0 100 100\" width={size} height={size} style={style} aria-hidden=\"true\">\n      <defs>\n        <clipPath id={clipId}>\n          <rect x=\"-10\" y={v.otworY} width=\"120\" height={120 - v.otworY} />\n        </clipPath>\n      </defs>\n      <g clipPath={`url(#${clipId})`}>{rysunek}</g>\n    </svg>\n  )\n}\n\n// Wersja do miniaturek w panelu/sklepie - zachowuje proporcje\nexport function VaseThumb({ id, color, size = 56 }) {\n  const v = VASES[id] || VASES.wazon_kula\n  return (\n    <svg viewBox=\"0 0 100 100\" width={size} height={size} aria-hidden=\"true\">\n      {v.art(palette(color || v.defaultColor))}\n    </svg>\n  )\n}\n", "src/art/Table.jsx": "// Blat stolu widziany z boku (lekko z gory) - owal w fioletowo-zolte paski,\n// z widoczna gruboscia blatu. Wazon stoi NA blacie, bukiet rosnie nad nim.\nimport React from 'react'\n\n// Srodek blatu i jego promienie w ukladzie sceny (0-100)\nexport const BLAT = { cx: 50, cy: 79, rx: 38, ry: 11 }\n\nconst PASKI = 9\nconst FIOLET = ['#9b74d6', '#8a5fc9']\nconst ZOLTY = ['#ffd97a', '#f7c95c']\n\nexport function TableArt() {\n  const { cx, cy, rx, ry } = BLAT\n  const grubosc = 5\n  // Paski biegna w poprzek blatu; przy patrzeniu z boku sciskaja sie w pionie razem z owalem\n  const pasy = Array.from({ length: PASKI }, (_, i) => ({\n    y: cy - ry + (i * 2 * ry) / PASKI,\n    h: (2 * ry) / PASKI + 0.02,\n    fill: i % 2 ? FIOLET[(i >> 1) % 2] : ZOLTY[(i >> 1) % 2],\n  }))\n\n  return (\n    <svg viewBox=\"0 0 100 100\" className=\"table-svg\" aria-hidden=\"true\">\n      <defs>\n        <clipPath id=\"blat-obrys\">\n          <ellipse cx={cx} cy={cy} rx={rx} ry={ry} />\n        </clipPath>\n        <linearGradient id=\"bok-blatu\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n          <stop offset=\"0%\" stopColor=\"#7a4fb5\" />\n          <stop offset=\"100%\" stopColor=\"#4b2f74\" />\n        </linearGradient>\n        <radialGradient id=\"glebia-blatu\" cx=\"50%\" cy=\"50%\" r=\"50%\">\n          <stop offset=\"52%\" stopColor=\"#3b2357\" stopOpacity=\"0\" />\n          <stop offset=\"100%\" stopColor=\"#3b2357\" stopOpacity=\"0.26\" />\n        </radialGradient>\n        <linearGradient id=\"polysk-blatu\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n          <stop offset=\"0%\" stopColor=\"#ffffff\" stopOpacity=\"0.3\" />\n          <stop offset=\"50%\" stopColor=\"#ffffff\" stopOpacity=\"0\" />\n        </linearGradient>\n      </defs>\n\n      {/* miekki cien na podlodze */}\n      <ellipse cx={cx} cy={cy + grubosc + 5} rx={rx * 0.94} ry={ry * 0.5} fill=\"#a9855f\" opacity=\"0.2\" />\n\n      {/* grubosc blatu - dolny owal wystaje spod gornego */}\n      <ellipse cx={cx} cy={cy + grubosc} rx={rx} ry={ry} fill=\"url(#bok-blatu)\" />\n\n      {/* powierzchnia blatu w paski */}\n      <g clipPath=\"url(#blat-obrys)\">\n        <rect x={cx - rx} y={cy - ry} width={rx * 2} height={ry * 2} fill=\"#f3e3bd\" />\n        {pasy.map((p, i) => (\n          <rect key={i} x={cx - rx} y={p.y} width={rx * 2} height={p.h} fill={p.fill} />\n        ))}\n      </g>\n\n      {/* przyciemnienie brzegow, zeby blat byl plaszczyzna, a nie naklejka */}\n      <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill=\"url(#glebia-blatu)\" />\n      <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill=\"url(#polysk-blatu)\" />\n\n      {/* kant blatu */}\n      <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill=\"none\" stroke=\"#6d47a6\" strokeWidth=\"1.1\" />\n      <path\n        d={`M${cx - rx} ${cy} A${rx} ${ry} 0 0 0 ${cx + rx} ${cy}`}\n        fill=\"none\"\n        stroke=\"#d3b6f5\"\n        strokeWidth=\"0.9\"\n        opacity=\"0.5\"\n      />\n    </svg>\n  )\n}\n\nexport function TrashArt({ open }) {\n  return (\n    <svg viewBox=\"0 0 100 100\" width=\"100%\" height=\"100%\" aria-hidden=\"true\">\n      <g transform={open ? 'translate(0 3)' : ''}>\n        <path d=\"M22 30 L28 88 C29 93 71 93 72 88 L78 30 Z\" fill=\"#8d9aa6\" />\n        <path d=\"M50 92 C62 92 71 91 72 88 L78 30 L62 30 L56 91 Z\" fill=\"#6e7c88\" />\n        <path d=\"M38 40 L41 82 M50 40 L50 82 M62 40 L59 82\" stroke=\"#5b6874\" strokeWidth=\"3\" strokeLinecap=\"round\" />\n      </g>\n      <g transform={open ? 'rotate(-18 22 24)' : ''}>\n        <rect x=\"16\" y=\"18\" width=\"68\" height=\"12\" rx=\"6\" fill=\"#aab6c1\" />\n        <rect x=\"40\" y=\"10\" width=\"20\" height=\"8\" rx=\"4\" fill=\"#aab6c1\" />\n      </g>\n    </svg>\n  )\n}\n", "src/art/stems.js": "// Jedna, uniwersalna lodyga: krzywa od wnetrza pojemnika do NASADY glowki kwiatu.\n// Pierwszy punkt kontrolny lezy wysoko NAD wylotem, wiec lodyga wychodzi z wazonu\n// pionowo (trzyma sie osi szyjki) i skreca do kwiatka dopiero ponad kantem.\n//\n// UWAGA: tylko dla kwiatow. Liscie maja wlasna galazke narysowana w ikonie,\n// wiec doklejanie im drugiej lodygi wygladaloby zle.\nimport { BY_ID, ROZMIAR_ELEMENTU, SRODEK_IKONY, NASADA_DOMYSLNA } from '../data/catalog'\n\nconst KOLORY = ['#5f8050', '#6f9160', '#7fa06d']\n\n// Gdzie dokladnie lodyga ma dotknac kwiatu. Punkt `nasada` jest podany\n// w jednostkach rysunku, wiec przeliczamy go na scene i obracamy razem z kwiatem -\n// dzieki temu np. tulipan zawsze ma lodyge u dolu kielicha, a nie z boku.\nfunction punktNasady(item) {\n  const n = BY_ID.flower[item.id]?.nasada || NASADA_DOMYSLNA\n  const jednostka = (ROZMIAR_ELEMENTU.flower / 100) * item.skala\n  const dx = (n.x - SRODEK_IKONY.x) * jednostka\n  const dy = (n.y - SRODEK_IKONY.y) * jednostka\n  const kat = (item.rot * Math.PI) / 180\n  return {\n    x: item.x + dx * Math.cos(kat) - dy * Math.sin(kat),\n    y: item.y + dx * Math.sin(kat) + dy * Math.cos(kat),\n  }\n}\n\nconst miedzy = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t })\n\nconst wysokoscW = (p, t) => {\n  const u = 1 - t\n  return u * u * u * p[0].y + 3 * u * u * t * p[1].y + 3 * u * t * t * p[2].y + t * t * t * p[3].y\n}\n\n// Najmniejsze t, przy ktorym krzywa przecina wysokosc wylotu wazonu.\nfunction tNaWysokosci(p, y) {\n  let poprzednia = wysokoscW(p, 0)\n  for (let i = 1; i <= 200; i += 1) {\n    const t = i / 200\n    const aktualna = wysokoscW(p, t)\n    if ((poprzednia - y) * (aktualna - y) <= 0) return t\n    poprzednia = aktualna\n  }\n  return 1\n}\n\n// Podzial krzywej (de Casteljau) - zwraca jej DRUGA polowe, od t do konca.\n// Dzieki temu kopia rysowana w warstwie kwiatu lezy dokladnie na oryginale,\n// zamiast byc osobna krzywa obok niego (stad braly sie podwojne lodygi).\nfunction drugaPolowa(p, t) {\n  const a = miedzy(p[0], p[1], t)\n  const b = miedzy(p[1], p[2], t)\n  const c = miedzy(p[2], p[3], t)\n  const d = miedzy(a, b, t)\n  const e = miedzy(b, c, t)\n  return [miedzy(d, e, t), e, c, p[3]]\n}\n\nconst zapisz = (p) => `M${p[0].x} ${p[0].y} C${p[1].x} ${p[1].y} ${p[2].x} ${p[2].y} ${p[3].x} ${p[3].y}`\n\nexport function sciezkiLodyg(items, usta, dno) {\n  return items\n    .filter((i) => i.kind === 'flower')\n    .map((i, idx) => {\n      const koniec = punktNasady(i)\n      const startX = usta.x + ((idx % 3) - 1) * 1.6\n      const punkty = [\n        { x: startX, y: dno },\n        { x: startX, y: usta.y - 16 },\n        { x: koniec.x * 0.72 + startX * 0.28, y: koniec.y + (usta.y - koniec.y) * 0.3 },\n        koniec,\n      ]\n      return {\n        uid: i.uid,\n        // pelna lodyga, rysowana POD wazonem\n        d: zapisz(punkty),\n        // ten sam odcinek od wylotu w gore - kopia w warstwie kwiatu\n        dNad: zapisz(drugaPolowa(punkty, tNaWysokosci(punkty, usta.y))),\n        z: i.z,\n        kolor: KOLORY[idx % KOLORY.length],\n      }\n    })\n}\n", "src/state/useGame.js": "import { useCallback, useEffect, useMemo, useRef, useState } from 'react'\nimport {\n  CATALOG_LIST,\n  BY_ID,\n  wycen,\n  NASADA_LISCIA,\n  LIMIT_KWIATOW,\n  LIMIT_LISCI,\n  LIMIT_DODATKOW,\n} from '../data/catalog'\nimport { anchorsFor, VASES } from '../art/vases'\n\nconst KEY = 'ogrod-gwiazdek-v1'\n\n// Domyslne warstwy: liscie z tylu, potem kwiaty, dodatki na wierzchu.\n// Kazdy element trzyma wlasne \"z\", wiec dziecko moze je dowolnie poprzekladac.\nconst BAZA_Z = { leaf: 1000, flower: 2000, extra: 3000 }\nconst MIN_Z = 100\nconst zDomyslne = (kind, i) => (BAZA_Z[kind] || 2000) + i\n\nfunction startoweOdblokowane() {\n  const out = {}\n  for (const [kind, list] of Object.entries(CATALOG_LIST)) {\n    out[kind] = list.filter((x) => x.start).map((x) => x.id)\n  }\n  return out\n}\n\nfunction stanPoczatkowy() {\n  return {\n    gwiazdki: 0,\n    odblokowane: startoweOdblokowane(),\n    kolekcja: [],\n    stol: { vaseId: 'wazon_kula', vaseColor: VASES.wazon_kula.defaultColor, items: [] },\n    sprzedanych: 0,\n  }\n}\n\n// Zapisy sprzed wprowadzenia warstw nie maja pola z - dokladamy je wg starej kolejnosci\nfunction zItemom(items) {\n  return items.map((i, idx) => (typeof i.z === 'number' ? i : { ...i, z: zDomyslne(i.kind, idx) }))\n}\n\nfunction uzupelnijZ(stol) {\n  return { ...stol, items: zItemom(stol.items || []) }\n}\n\nfunction wczytaj() {\n  try {\n    const raw = localStorage.getItem(KEY)\n    if (!raw) return stanPoczatkowy()\n    const zapis = JSON.parse(raw)\n    const baza = stanPoczatkowy()\n    return {\n      ...baza,\n      ...zapis,\n      // dokladamy elementy startowe, gdyby katalog urosl po ostatnim zapisie\n      odblokowane: Object.fromEntries(\n        Object.keys(baza.odblokowane).map((k) => [\n          k,\n          Array.from(new Set([...(baza.odblokowane[k] || []), ...((zapis.odblokowane || {})[k] || [])])),\n        ])\n      ),\n      stol: uzupelnijZ({ ...baza.stol, ...(zapis.stol || {}) }),\n      kolekcja: (zapis.kolekcja || []).map((k) => ({ ...k, items: zItemom(k.items || []) })),\n    }\n  } catch {\n    return stanPoczatkowy()\n  }\n}\n\nlet uidLicznik = 0\nconst nowyUid = () => `i${Date.now().toString(36)}${(uidLicznik++).toString(36)}`\n\nconst losowo = (a, b) => a + Math.random() * (b - a)\n\n// nic nie moze wyjechac poza stol\nconst wGranicach = (v) => (Number.isFinite(v) ? Math.min(97, Math.max(3, v)) : 50)\n\nexport function useGame() {\n  const [stan, setStan] = useState(wczytaj)\n  const zapisTimer = useRef(null)\n\n  // zapis do localStorage (z lekkim opoznieniem, zeby nie pisac przy kazdym pikselu przeciagania)\n  useEffect(() => {\n    clearTimeout(zapisTimer.current)\n    zapisTimer.current = setTimeout(() => {\n      try {\n        localStorage.setItem(KEY, JSON.stringify(stan))\n      } catch {\n        /* brak miejsca / tryb prywatny - gra dziala dalej, tylko bez zapisu */\n      }\n    }, 250)\n    return () => clearTimeout(zapisTimer.current)\n  }, [stan])\n\n  const { stol } = stan\n  const kotwice = useMemo(() => anchorsFor(stol.vaseId), [stol.vaseId])\n\n  const odblokowany = useCallback(\n    (kind, id) => (stan.odblokowane[kind] || []).includes(id),\n    [stan.odblokowane]\n  )\n\n  // --- Praca na stole ---\n\n  // Kazda kategoria ma WLASNA pule miejsc - zielen nie zabiera miejsca kwiatom.\n  const limitKwiatow = LIMIT_KWIATOW\n  const limitLisci = LIMIT_LISCI\n  const kwiatow = stol.items.filter((i) => i.kind === 'flower').length\n  const lisci = stol.items.filter((i) => i.kind === 'leaf').length\n  const dodatkow = stol.items.filter((i) => i.kind === 'extra').length\n\n  // Zwraca null gdy dodano, albo tekst komunikatu gdy sie nie zmiescilo.\n  const dodaj = useCallback(\n    (kind, id, color, punktWe) => {\n      if (kind === 'extra' && dodatkow >= LIMIT_DODATKOW) {\n        return 'Więcej dodatków się nie zmieści'\n      }\n      if (kind === 'flower' && kwiatow >= limitKwiatow) {\n        return `Więcej niż ${LIMIT_KWIATOW} kwiatów się nie zmieści`\n      }\n      if (kind === 'leaf' && lisci >= limitLisci) {\n        return `Więcej niż ${LIMIT_LISCI} liści się nie zmieści`\n      }\n      // odrzucamy punkt, ktorego nie da sie policzyc - inaczej kwiat wyladowalby w rogu ekranu\n      const punkt =\n        punktWe && Number.isFinite(punktWe.x) && Number.isFinite(punktWe.y) ? punktWe : null\n      setStan((s) => {\n        const kat = BY_ID[kind][id]\n        if (!kat) return s\n        const swobodny = kind === 'extra'\n        let baza = punkt\n        if (!baza && swobodny) {\n          // wstazki i drobiazgi ladują przy szyjce wazonu, nie w srodku bukietu\n          const usta = (VASES[s.stol.vaseId] || VASES.wazon_kula).mouth\n          baza = { x: usta.x + losowo(-7, 7), y: usta.y + losowo(-1, 7) }\n        }\n        if (!baza && kind === 'leaf') {\n          // Lisc ma wlasna galazke i obraca sie wokol nasady, wiec sadzimy go tak,\n          // zeby ta nasada wypadla w wylocie wazonu. Rozrzut robi obrot, nie pozycja.\n          const usta = (VASES[s.stol.vaseId] || VASES.wazon_kula).mouth\n          baza = { x: usta.x + losowo(-6, 6), y: usta.y - NASADA_LISCIA + losowo(-2, 2) }\n        }\n        if (!baza) {\n          const zajete = s.stol.items.filter((i) => i.kind === 'flower')\n          const wolne = kotwice.filter((k) => !zajete.some((i) => Math.hypot(i.x - k.x, i.y - k.y) < 7))\n          const pula = wolne.length ? wolne : kotwice\n          baza = pula[Math.floor(Math.random() * pula.length)]\n        }\n        const item = {\n          uid: nowyUid(),\n          kind,\n          id,\n          color: color || kat.kolor,\n          // losowy offset + losowy obrot => bukiet od razu wyglada naturalnie\n          x: wGranicach(baza.x + (punkt || kind !== 'flower' ? 0 : losowo(-3.2, 3.2))),\n          y: wGranicach(baza.y + (punkt || kind !== 'flower' ? 0 : losowo(-3.2, 3.2))),\n          rot: swobodny ? losowo(-12, 12) : losowo(-22, 22) * (kind === 'leaf' ? 1.15 : 1),\n          skala: (kat.skala || 1) * losowo(0.94, 1.06),\n          z: zDomyslne(kind, s.stol.items.length),\n        }\n        return { ...s, stol: { ...s.stol, items: [...s.stol.items, item] } }\n      })\n      return null\n    },\n    [kotwice, kwiatow, lisci, dodatkow, limitKwiatow, limitLisci]\n  )\n\n  const przesun = useCallback((uid, x, y) => {\n    setStan((s) => ({\n      ...s,\n      stol: {\n        ...s.stol,\n        items: s.stol.items.map((i) => (i.uid === uid ? { ...i, x: wGranicach(x), y: wGranicach(y) } : i)),\n      },\n    }))\n  }, [])\n\n  // Magnetyzm: po upuszczeniu blisko kotwicy kwiat \"wskakuje\" na nia (bez presji precyzji)\n  const upusc = useCallback(\n    (uid, x, y) => {\n      setStan((s) => {\n        const item = s.stol.items.find((i) => i.uid === uid)\n        if (!item) return s\n        let nx = x\n        let ny = y\n        // Magnetyzm dziala TYLKO dla kwiatow. Liscie i dodatki zostaja dokladnie\n        // tam, gdzie je puszczono - inaczej \"uciekaly\" spod palca.\n        if (item.kind === 'flower') {\n          let best = null\n          let bestD = Infinity\n          for (const k of kotwice) {\n            const d = Math.hypot(k.x - x, k.y - y)\n            if (d < bestD) { bestD = d; best = k }\n          }\n          if (best && bestD < 5) {\n            nx = best.x + losowo(-1, 1)\n            ny = best.y + losowo(-1, 1)\n          }\n        }\n        return {\n          ...s,\n          stol: {\n            ...s.stol,\n            items: s.stol.items.map((i) =>\n              i.uid === uid ? { ...i, x: wGranicach(nx), y: wGranicach(ny) } : i\n            ),\n          },\n        }\n      })\n    },\n    [kotwice]\n  )\n\n  const zmienKolor = useCallback((uid, color) => {\n    setStan((s) => ({\n      ...s,\n      stol: { ...s.stol, items: s.stol.items.map((i) => (i.uid === uid ? { ...i, color } : i)) },\n    }))\n  }, [])\n\n  const obroc = useCallback((uid, delta) => {\n    setStan((s) => ({\n      ...s,\n      stol: { ...s.stol, items: s.stol.items.map((i) => (i.uid === uid ? { ...i, rot: i.rot + delta } : i)) },\n    }))\n  }, [])\n\n  const skaluj = useCallback((uid, mnoznik) => {\n    setStan((s) => ({\n      ...s,\n      stol: {\n        ...s.stol,\n        items: s.stol.items.map((i) =>\n          i.uid === uid ? { ...i, skala: Math.min(1.9, Math.max(0.5, i.skala * mnoznik)) } : i\n        ),\n      },\n    }))\n  }, [])\n\n  const usun = useCallback((uid) => {\n    setStan((s) => ({ ...s, stol: { ...s.stol, items: s.stol.items.filter((i) => i.uid !== uid) } }))\n  }, [])\n\n  // Przelozenie elementu przed wszystkie inne / za wszystkie inne\n  const naPrzod = useCallback((uid) => {\n    setStan((s) => {\n      const max = Math.max(...s.stol.items.map((i) => i.z ?? 0), 0)\n      return {\n        ...s,\n        stol: { ...s.stol, items: s.stol.items.map((i) => (i.uid === uid ? { ...i, z: max + 1 } : i)) },\n      }\n    })\n  }, [])\n\n  const doTylu = useCallback((uid) => {\n    setStan((s) => {\n      const min = Math.min(...s.stol.items.map((i) => i.z ?? 0), BAZA_Z.flower)\n      // nie schodzimy ponizej MIN_Z, zeby nic nie schowalo sie za wazonem\n      return {\n        ...s,\n        stol: {\n          ...s.stol,\n          items: s.stol.items.map((i) => (i.uid === uid ? { ...i, z: Math.max(MIN_Z, min - 1) } : i)),\n        },\n      }\n    })\n  }, [])\n\n  const ustawWazon = useCallback((vaseId) => {\n    setStan((s) => ({\n      ...s,\n      stol: { ...s.stol, vaseId, vaseColor: BY_ID.vase[vaseId]?.kolor || VASES[vaseId]?.defaultColor },\n    }))\n  }, [])\n\n  const ustawKolorWazonu = useCallback((vaseColor) => {\n    setStan((s) => ({ ...s, stol: { ...s.stol, vaseColor } }))\n  }, [])\n\n  const wyczyscStol = useCallback(() => {\n    setStan((s) => ({ ...s, stol: { ...s.stol, items: [] } }))\n  }, [])\n\n  // --- Kolekcja i sprzedaz ---\n\n  const wycena = useMemo(() => wycen(stol.items, stol.vaseId), [stol.items, stol.vaseId])\n\n  // UWAGA: wynik liczymy z biezacego stanu PRZED setStan.\n  // Odczyt z wnetrza updatera nie dziala - React uruchamia go pozniej (i w StrictMode dwa razy).\n  const zapiszDoKolekcji = useCallback(\n    (nazwa) => {\n      if (!stol.items.some((i) => i.kind === 'flower')) return false\n      const wpis = {\n        uid: nowyUid(),\n        nazwa: nazwa || `Bukiet ${stan.kolekcja.length + 1}`,\n        data: new Date().toISOString(),\n        vaseId: stol.vaseId,\n        vaseColor: stol.vaseColor,\n        items: stol.items.map((i) => ({ ...i })),\n        wartosc: wycen(stol.items, stol.vaseId).razem,\n      }\n      setStan((s) => ({ ...s, kolekcja: [wpis, ...s.kolekcja], stol: { ...s.stol, items: [] } }))\n      return true\n    },\n    [stol, stan.kolekcja.length]\n  )\n\n  const sprzedaj = useCallback(() => {\n    const w = wycen(stol.items, stol.vaseId)\n    if (!w.mozna) return 0\n    setStan((s) => ({\n      ...s,\n      gwiazdki: s.gwiazdki + w.razem,\n      sprzedanych: s.sprzedanych + 1,\n      stol: { ...s.stol, items: [] },\n    }))\n    return w.razem\n  }, [stol])\n\n  const sprzedajZKolekcji = useCallback(\n    (uid) => {\n      const wpis = stan.kolekcja.find((k) => k.uid === uid)\n      if (!wpis) return 0\n      setStan((s) => ({\n        ...s,\n        gwiazdki: s.gwiazdki + wpis.wartosc,\n        sprzedanych: s.sprzedanych + 1,\n        kolekcja: s.kolekcja.filter((k) => k.uid !== uid),\n      }))\n      return wpis.wartosc\n    },\n    [stan.kolekcja]\n  )\n\n  const wczytajZKolekcji = useCallback((uid) => {\n    setStan((s) => {\n      const wpis = s.kolekcja.find((k) => k.uid === uid)\n      if (!wpis) return s\n      return {\n        ...s,\n        stol: { vaseId: wpis.vaseId, vaseColor: wpis.vaseColor, items: wpis.items.map((i) => ({ ...i, uid: nowyUid() })) },\n      }\n    })\n  }, [])\n\n  const usunZKolekcji = useCallback((uid) => {\n    setStan((s) => ({ ...s, kolekcja: s.kolekcja.filter((k) => k.uid !== uid) }))\n  }, [])\n\n  // --- Sklepik ---\n\n  const kup = useCallback(\n    (kind, id) => {\n      const kat = BY_ID[kind][id]\n      if (!kat || (stan.odblokowane[kind] || []).includes(id)) return false\n      if (stan.gwiazdki < kat.cena) return false\n      setStan((s) => ({\n        ...s,\n        gwiazdki: s.gwiazdki - kat.cena,\n        odblokowane: { ...s.odblokowane, [kind]: [...s.odblokowane[kind], id] },\n      }))\n      return true\n    },\n    [stan.odblokowane, stan.gwiazdki]\n  )\n\n  const reset = useCallback(() => {\n    localStorage.removeItem(KEY)\n    setStan(stanPoczatkowy())\n  }, [])\n\n  // tryb testowy dla dorosłych: dosypanie gwiazdek (widoczne w Ustawieniach)\n  const dosypGwiazdki = useCallback((n) => {\n    setStan((s) => ({ ...s, gwiazdki: s.gwiazdki + n }))\n  }, [])\n\n  return {\n    stan,\n    stol,\n    kotwice,\n    wycena,\n    limitKwiatow,\n    limitLisci,\n    kwiatow,\n    lisci,\n    odblokowany,\n    dodaj,\n    przesun,\n    upusc,\n    zmienKolor,\n    obroc,\n    skaluj,\n    usun,\n    naPrzod,\n    doTylu,\n    ustawWazon,\n    ustawKolorWazonu,\n    wyczyscStol,\n    zapiszDoKolekcji,\n    sprzedaj,\n    sprzedajZKolekcji,\n    wczytajZKolekcji,\n    usunZKolekcji,\n    kup,\n    reset,\n    dosypGwiazdki,\n  }\n}\n", "src/components/ItemArt.jsx": "import React from 'react'\nimport { FlowerArt } from '../art/flowers'\nimport { LeafArt } from '../art/leaves'\nimport { ExtraArt } from '../art/extras'\nimport { VaseThumb } from '../art/vases'\n\n// Jedno miejsce, ktore wie ktory zestaw ksztaltow narysowac\nexport function ItemArt({ kind, id, color, size = '100%' }) {\n  if (kind === 'leaf') return <LeafArt id={id} color={color} size={size} />\n  if (kind === 'extra') return <ExtraArt id={id} color={color} size={size} />\n  if (kind === 'vase') return <VaseThumb id={id} color={color} size={size} />\n  return <FlowerArt id={id} color={color} size={size} />\n}\n", "src/components/Palette.jsx": "import React from 'react'\nimport { COLOR_SETS } from '../data/colors'\n\nexport function Palette({ kind, wybrany, onWybierz, tytul = 'Kolor' }) {\n  const kolory = COLOR_SETS[kind] || COLOR_SETS.flower\n  return (\n    <div className=\"paleta\">\n      <div className=\"paleta-tytul\">{tytul}</div>\n      <div className=\"paleta-siatka\">\n        {kolory.map((k) => (\n          <button\n            key={k}\n            type=\"button\"\n            className={'swatch' + (k === wybrany ? ' wybrany' : '')}\n            style={{ background: k }}\n            aria-label={`Kolor ${k}`}\n            onClick={() => onWybierz(k)}\n          />\n        ))}\n      </div>\n    </div>\n  )\n}\n", "src/components/BouquetPreview.jsx": "import React from 'react'\nimport { VASES, VaseArt } from '../art/vases'\nimport { sciezkiLodyg } from '../art/stems'\nimport { TableArt } from '../art/Table'\nimport { ItemArt } from './ItemArt'\nimport { ROZMIAR_ELEMENTU as ROZMIAR } from '../data/catalog'\n\n\n// Statyczny podglad bukietu - uzywany w kolekcji. Ten sam uklad co stol roboczy.\nexport function BouquetPreview({ vaseId, vaseColor, items }) {\n  const wazon = VASES[vaseId] || VASES.wazon_kula\n  const usta = wazon.mouth\n  const lodygi = sciezkiLodyg(items, usta, wazon.dno)\n  const pudlo = {\n    left: `${wazon.box.x}%`,\n    top: `${wazon.box.y}%`,\n    width: `${wazon.box.size}%`,\n    height: `${wazon.box.size}%`,\n  }\n\n  const rysuj = (item) => (\n    <div\n      key={item.uid}\n      className=\"item statyczny\"\n      style={{\n        left: `${item.x}%`,\n        top: `${item.y}%`,\n        width: `${ROZMIAR[item.kind] || 21}%`,\n        zIndex: item.z,\n        transformOrigin: item.kind === 'leaf' ? '50% 84%' : '50% 50%',\n        transform: `translate(-50%, -50%) rotate(${item.rot}deg) scale(${item.skala})`,\n      }}\n    >\n      <ItemArt kind={item.kind} id={item.id} color={item.color} />\n    </div>\n  )\n\n  return (\n    <div className=\"podglad\">\n      <TableArt />\n      <div className=\"wazon wazon-tyl\" style={pudlo}>\n        <VaseArt id={vaseId} color={vaseColor} size=\"100%\" />\n      </div>\n\n      <svg className=\"lodygi\" viewBox=\"0 0 100 100\" preserveAspectRatio=\"none\" aria-hidden=\"true\">\n        <ellipse\n          cx={wazon.box.x + wazon.box.size / 2}\n          cy={wazon.box.y + wazon.box.size * 0.925}\n          rx={wazon.box.size * 0.26}\n          ry={2.6}\n          fill=\"#4b2f74\"\n          opacity=\"0.28\"\n        />\n        {lodygi.map((l) => (\n          <path key={l.uid} d={l.d} stroke={l.kolor} strokeWidth=\"1.2\" strokeLinecap=\"round\" fill=\"none\" />\n        ))}\n      </svg>\n\n      <div className=\"wazon wazon-przod\" style={pudlo}>\n        <VaseArt id={vaseId} color={vaseColor} size=\"100%\" tylko=\"przod\" />\n      </div>\n\n      {lodygi.map((l) => (\n          <svg\n            key={`nad-${l.uid}`}\n            className=\"lodyga-nad\"\n            style={{ zIndex: l.z - 1 }}\n            viewBox=\"0 0 100 100\"\n            preserveAspectRatio=\"none\"\n            aria-hidden=\"true\"\n          >\n            <path d={l.dNad} stroke={l.kolor} strokeWidth=\"1.2\" strokeLinecap=\"round\" fill=\"none\" />\n          </svg>\n      ))}\n\n      {items.map(rysuj)}\n    </div>\n  )\n}\n", "src/components/Workbench.jsx": "import React, { useCallback, useEffect, useRef, useState } from 'react'\nimport { TableArt, TrashArt } from '../art/Table'\nimport { VASES, VaseArt } from '../art/vases'\nimport { sciezkiLodyg } from '../art/stems'\nimport { ItemArt } from './ItemArt'\nimport { ROZMIAR_ELEMENTU as ROZMIAR } from '../data/catalog'\nimport { Palette } from './Palette'\nimport { dzwiek } from '../sound'\n\n\nexport function Workbench({ gra, sceneRef, zaznaczony, setZaznaczony }) {\n  const { stol, kotwice, przesun, upusc, usun, zmienKolor, obroc, skaluj, naPrzod, doTylu } = gra\n  const koszRef = useRef(null)\n  const [koszAktywny, setKoszAktywny] = useState(false)\n  const [przeciagany, setPrzeciagany] = useState(null)\n  const drag = useRef(null)\n\n  const doProcentow = useCallback(\n    (clientX, clientY) => {\n      const r = sceneRef.current.getBoundingClientRect()\n      if (!r.width || !r.height) return null\n      return {\n        x: ((clientX - r.left) / r.width) * 100,\n        y: ((clientY - r.top) / r.height) * 100,\n      }\n    },\n    [sceneRef]\n  )\n\n  const nadKoszem = (clientX, clientY) => {\n    const el = koszRef.current\n    if (!el) return false\n    const r = el.getBoundingClientRect()\n    return clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom\n  }\n\n  const onPointerDown = (e, item) => {\n    e.stopPropagation()\n    e.currentTarget.setPointerCapture(e.pointerId)\n    const p = doProcentow(e.clientX, e.clientY)\n    if (!p) return\n    drag.current = {\n      uid: item.uid,\n      dx: item.x - p.x,\n      dy: item.y - p.y,\n      startX: e.clientX,\n      startY: e.clientY,\n      ruszony: false,\n    }\n  }\n\n  const onPointerMove = (e) => {\n    const d = drag.current\n    if (!d) return\n    const dist = Math.hypot(e.clientX - d.startX, e.clientY - d.startY)\n    if (!d.ruszony && dist < 6) return\n    d.ruszony = true\n    setPrzeciagany(d.uid)\n    const p = doProcentow(e.clientX, e.clientY)\n    if (!p) return\n    przesun(d.uid, p.x + d.dx, p.y + d.dy)\n    setKoszAktywny(nadKoszem(e.clientX, e.clientY))\n  }\n\n  const onPointerUp = (e, item) => {\n    const d = drag.current\n    drag.current = null\n    setKoszAktywny(false)\n    setPrzeciagany(null)\n    if (!d) return\n    if (!d.ruszony) {\n      // krotkie tapniecie = zaznaczenie i paletka kolorow\n      setZaznaczony((z) => (z === item.uid ? null : item.uid))\n      return\n    }\n    if (nadKoszem(e.clientX, e.clientY)) {\n      usun(d.uid)\n      setZaznaczony(null)\n      dzwiek.kosz()\n      return\n    }\n    const p = doProcentow(e.clientX, e.clientY)\n    if (!p) return\n    upusc(d.uid, p.x + d.dx, p.y + d.dy)\n  }\n\n  // Escape / klik w tlo zamyka paletke\n  useEffect(() => {\n    const onKey = (e) => e.key === 'Escape' && setZaznaczony(null)\n    window.addEventListener('keydown', onKey)\n    return () => window.removeEventListener('keydown', onKey)\n  }, [setZaznaczony])\n\n  const wazon = VASES[stol.vaseId] || VASES.wazon_kula\n  const usta = wazon.mouth\n  const lodygi = sciezkiLodyg(stol.items, usta, wazon.dno)\n  const pudloWazonu = {\n    left: `${wazon.box.x}%`,\n    top: `${wazon.box.y}%`,\n    width: `${wazon.box.size}%`,\n    height: `${wazon.box.size}%`,\n  }\n  const zazn = stol.items.find((i) => i.uid === zaznaczony)\n\n  const renderItem = (item) => {\n    const bazowy = ROZMIAR[item.kind] || 21\n    return (\n      <div\n        key={item.uid}\n        className={\n          'item' +\n          (zaznaczony === item.uid ? ' zaznaczony' : '') +\n          (przeciagany === item.uid ? ' przeciagany' : '')\n        }\n        style={{\n          left: `${item.x}%`,\n          top: `${item.y}%`,\n          width: `${bazowy}%`,\n          zIndex: item.z,\n          // liscie obracaja sie wokol nasady (dolu), a nie srodka - dzieki temu\n          // przy obracaniu nie wyjezdzaja z wazonu i latwiej je dopasowac\n          transformOrigin: item.kind === 'leaf' ? '50% 84%' : '50% 50%',\n          transform: `translate(-50%, -50%) rotate(${item.rot}deg) scale(${item.skala})`,\n        }}\n        onPointerDown={(e) => onPointerDown(e, item)}\n        onPointerMove={onPointerMove}\n        onPointerUp={(e) => onPointerUp(e, item)}\n        onPointerCancel={() => { drag.current = null; setKoszAktywny(false); setPrzeciagany(null) }}\n      >\n        <ItemArt kind={item.kind} id={item.id} color={item.color} />\n      </div>\n    )\n  }\n\n  return (\n    <div className=\"plansza\" onPointerDown={() => setZaznaczony(null)}>\n      <div className=\"scena\" ref={sceneRef}>\n        <TableArt />\n\n        {/* Wazon TYL: caly ksztalt, rysowany pod lodygami */}\n        <div className=\"wazon wazon-tyl\" style={pudloWazonu}>\n          <VaseArt id={stol.vaseId} color={stol.vaseColor} size=\"100%\" />\n        </div>\n\n        {/* Lodygi: jedna uniwersalna krzywa od wnetrza wazonu do glowki kwiatu */}\n        <svg className=\"lodygi\" viewBox=\"0 0 100 100\" preserveAspectRatio=\"none\" aria-hidden=\"true\">\n          {/* cien styku wazonu z blatem - bez niego wazon sprawia wrazenie, ze lewituje */}\n          <ellipse\n            cx={wazon.box.x + wazon.box.size / 2}\n            cy={wazon.box.y + wazon.box.size * 0.925}\n            rx={wazon.box.size * 0.26}\n            ry={2.6}\n            fill=\"#4b2f74\"\n            opacity=\"0.28\"\n          />\n          {lodygi.map((l) => (\n            <path key={l.uid} d={l.d} stroke={l.kolor} strokeWidth=\"1.2\" strokeLinecap=\"round\" fill=\"none\" />\n          ))}\n        </svg>\n\n        {/* Wazon PRZOD: tylko czesc ponizej linii otworu, rysowana nad lodygami.\n            Efekt: lodygi widac, jak wchodza w otwor, a dalej chowaja sie w wazonie. */}\n        <div className=\"wazon wazon-przod\" style={pudloWazonu}>\n          <VaseArt id={stol.vaseId} color={stol.vaseColor} size=\"100%\" tylko=\"przod\" />\n        </div>\n\n        {/* Kazda lodyga jeszcze raz, w warstwie SWOJEGO kwiatu i przycieta od gory\n            do wylotu wazonu (albo do samego kwiatu, jesli ten wisi nizej).\n            Dzieki temu „do tylu / na wierzch\" przesuwa kwiat RAZEM z lodyga,\n            a mimo to nic nie rysuje sie po korpusie wazonu. */}\n        {lodygi.map((l) => (\n            <svg\n              key={`nad-${l.uid}`}\n              className=\"lodyga-nad\"\n              style={{ zIndex: l.z - 1 }}\n              viewBox=\"0 0 100 100\"\n              preserveAspectRatio=\"none\"\n              aria-hidden=\"true\"\n            >\n              <path d={l.dNad} stroke={l.kolor} strokeWidth=\"1.2\" strokeLinecap=\"round\" fill=\"none\" />\n            </svg>\n        ))}\n\n        {/* Podpowiedz gdy pusto */}\n        {stol.items.length === 0 && (\n          <div className=\"podpowiedz\">\n            <span>Wybierz kwiatek z panelu&nbsp;👇</span>\n            <small>albo przeciągnij go na stół</small>\n          </div>\n        )}\n\n        {/* Kolejnosc warstw bierze sie z pola z kazdego elementu (przyciski „do tylu / na wierzch\") */}\n        {stol.items.map(renderItem)}\n\n        {/* Paletka + narzedzia zaznaczonego elementu */}\n        {zazn && (\n          <div\n            className=\"narzedzia\"\n            style={{\n              left: `${Math.min(78, Math.max(22, zazn.x))}%`,\n              top: `${Math.min(88, Math.max(6, zazn.y + 14))}%`,\n            }}\n            onPointerDown={(e) => e.stopPropagation()}\n          >\n            <Palette\n              kind={zazn.kind}\n              wybrany={zazn.color}\n              tytul=\"Zmień kolor\"\n              onWybierz={(k) => zmienKolor(zazn.uid, k)}\n            />\n            <div className=\"narzedzia-rzad\">\n              <button type=\"button\" onClick={() => obroc(zazn.uid, -5)} title=\"Obróć w lewo\">↺</button>\n              <button type=\"button\" onClick={() => skaluj(zazn.uid, 0.88)} title=\"Mniejszy\">－</button>\n              <button type=\"button\" onClick={() => skaluj(zazn.uid, 1.14)} title=\"Większy\">＋</button>\n              <button type=\"button\" onClick={() => obroc(zazn.uid, 5)} title=\"Obróć w prawo\">↻</button>\n            </div>\n            <div className=\"narzedzia-rzad\">\n              <button type=\"button\" className=\"szeroki\" onClick={() => doTylu(zazn.uid)}>\n                ↙ Do tyłu\n              </button>\n              <button type=\"button\" className=\"szeroki\" onClick={() => naPrzod(zazn.uid)}>\n                Na wierzch ↗\n              </button>\n              <button\n                type=\"button\"\n                className=\"usun\"\n                onClick={() => { usun(zazn.uid); setZaznaczony(null); dzwiek.kosz() }}\n                title=\"Wyrzuć\"\n              >\n                🗑\n              </button>\n            </div>\n          </div>\n        )}\n      </div>\n\n      <div ref={koszRef} className={'kosz' + (koszAktywny ? ' aktywny' : '')} title=\"Przeciągnij tutaj, żeby wyrzucić\">\n        <TrashArt open={koszAktywny} />\n        <span>Kosz</span>\n      </div>\n    </div>\n  )\n}\n", "src/components/Panels.jsx": "import React, { useRef, useState } from 'react'\nimport { CATALOG_LIST, KATEGORIE } from '../data/catalog'\nimport { ItemArt } from './ItemArt'\nimport { Palette } from './Palette'\n\nexport function Panels({ gra, sceneRef, naSklep, onKomunikat }) {\n  const [kat, setKat] = useState('flower')\n  const [otwarty, setOtwarty] = useState(true)\n  const { odblokowany, dodaj, stol, ustawWazon, ustawKolorWazonu } = gra\n  const [duch, setDuch] = useState(null)\n  const drag = useRef(null)\n\n  const lista = CATALOG_LIST[kat]\n\n  const nadScena = (x, y) => {\n    const el = sceneRef.current\n    if (!el) return null\n    const r = el.getBoundingClientRect()\n    // scena jeszcze bez wymiarow (np. tuz po starcie) - lepiej oddac null niz policzyc NaN\n    if (!r.width || !r.height) return null\n    if (x < r.left || x > r.right || y < r.top || y > r.bottom) return null\n    const p = { x: ((x - r.left) / r.width) * 100, y: ((y - r.top) / r.height) * 100 }\n    return Number.isFinite(p.x) && Number.isFinite(p.y) ? p : null\n  }\n\n  const startDrag = (e, poz) => {\n    if (kat === 'vase') return\n    e.currentTarget.setPointerCapture(e.pointerId)\n    drag.current = { poz, startX: e.clientX, startY: e.clientY, ruszony: false }\n  }\n\n  const moveDrag = (e) => {\n    const d = drag.current\n    if (!d) return\n    if (!d.ruszony && Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < 8) return\n    d.ruszony = true\n    setDuch({ poz: d.poz, x: e.clientX, y: e.clientY })\n  }\n\n  const endDrag = (e, poz) => {\n    const d = drag.current\n    drag.current = null\n    setDuch(null)\n    if (!d) return\n    if (!d.ruszony) {\n      // tapniecie = kwiat sam wskakuje na wolny punkt kotwiczacy\n      const blad = dodaj(kat, poz.id, poz.kolor, null)\n      if (blad) onKomunikat(blad)\n      return\n    }\n    const punkt = nadScena(e.clientX, e.clientY)\n    if (punkt) {\n      const blad = dodaj(kat, poz.id, poz.kolor, punkt)\n      if (blad) onKomunikat(blad)\n    }\n  }\n\n  return (\n    <section className={'panele' + (otwarty ? '' : ' zwiniete')}>\n      <div className=\"zakladki\">\n        {KATEGORIE.map((k) => (\n          <button\n            key={k.key}\n            type=\"button\"\n            className={'zakladka' + (kat === k.key ? ' aktywna' : '')}\n            onClick={() => { setKat(k.key); setOtwarty(true) }}\n          >\n            <span className=\"emo\">{k.emoji}</span>\n            <span>{k.label}</span>\n          </button>\n        ))}\n        <button\n          type=\"button\"\n          className=\"zwin\"\n          onClick={() => setOtwarty((o) => !o)}\n          title={otwarty ? 'Zwiń panel' : 'Rozwiń panel'}\n        >\n          {otwarty ? '▾' : '▴'}\n        </button>\n      </div>\n\n      <div className=\"panel-tresc\">\n        {kat === 'vase' && (\n          <div className=\"wazon-kolor\">\n            <Palette\n              kind=\"vase\"\n              tytul=\"Kolor wazonu\"\n              wybrany={stol.vaseColor}\n              onWybierz={(k) => ustawKolorWazonu(k)}\n            />\n          </div>\n        )}\n\n        <div className=\"siatka\">\n          {lista.map((poz) => {\n            const mam = odblokowany(kat, poz.id)\n            const aktywnyWazon = kat === 'vase' && stol.vaseId === poz.id\n            return (\n              <button\n                key={poz.id}\n                type=\"button\"\n                className={'kafel' + (mam ? '' : ' zamkniety') + (aktywnyWazon ? ' wybrany' : '')}\n                onPointerDown={(e) => mam && startDrag(e, poz)}\n                onPointerMove={moveDrag}\n                onPointerUp={(e) => {\n                  if (!mam) { naSklep(); return }\n                  if (kat === 'vase') { ustawWazon(poz.id); return }\n                  endDrag(e, poz)\n                }}\n                onPointerCancel={() => { drag.current = null; setDuch(null) }}\n              >\n                <span className=\"kafel-art\">\n                  <ItemArt kind={kat} id={poz.id} color={poz.kolor} />\n                </span>\n                <span className=\"kafel-nazwa\">{poz.nazwa}</span>\n                {!mam && <span className=\"klodka\">🔒 {poz.cena}★</span>}\n              </button>\n            )\n          })}\n        </div>\n      </div>\n\n      {duch && (\n        <div className=\"duch\" style={{ left: duch.x, top: duch.y }}>\n          <ItemArt kind={kat} id={duch.poz.id} color={duch.poz.kolor} />\n        </div>\n      )}\n    </section>\n  )\n}\n", "src/components/Collection.jsx": "import React from 'react'\nimport { BouquetPreview } from './BouquetPreview'\nimport { dzwiek } from '../sound'\n\nexport function Collection({ gra, naStol }) {\n  const { stan, sprzedajZKolekcji, wczytajZKolekcji, usunZKolekcji } = gra\n  const { kolekcja } = stan\n\n  if (!kolekcja.length) {\n    return (\n      <div className=\"widok pusto\">\n        <div className=\"pusto-ikona\">🖼️</div>\n        <h2>Kolekcja jest jeszcze pusta</h2>\n        <p>Ułóż bukiet na stole i kliknij <strong>Zapisz</strong>, żeby trafił tutaj.</p>\n        <button type=\"button\" className=\"btn duzy\" onClick={naStol}>Wracam do stołu</button>\n      </div>\n    )\n  }\n\n  return (\n    <div className=\"widok\">\n      <h2 className=\"naglowek-widoku\">Moja kolekcja <span className=\"licznik-mini\">{kolekcja.length}</span></h2>\n      <div className=\"galeria\">\n        {kolekcja.map((b) => (\n          <article key={b.uid} className=\"karta-bukietu\">\n            <BouquetPreview vaseId={b.vaseId} vaseColor={b.vaseColor} items={b.items} />\n            <h3>{b.nazwa}</h3>\n            <p className=\"meta\">\n              {new Date(b.data).toLocaleDateString('pl-PL')} · wart {b.wartosc}★\n            </p>\n            <div className=\"karta-akcje\">\n              <button type=\"button\" className=\"btn maly\" onClick={() => { wczytajZKolekcji(b.uid); naStol() }}>\n                Otwórz\n              </button>\n              <button\n                type=\"button\"\n                className=\"btn maly zloty\"\n                onClick={() => { const z = sprzedajZKolekcji(b.uid); if (z) dzwiek.sprzedaz() }}\n              >\n                Sprzedaj {b.wartosc}★\n              </button>\n              <button\n                type=\"button\"\n                className=\"btn maly cichy\"\n                onClick={() => { if (confirm(`Na pewno usunąć „${b.nazwa}”?`)) { usunZKolekcji(b.uid); dzwiek.kosz() } }}\n              >\n                🗑\n              </button>\n            </div>\n          </article>\n        ))}\n      </div>\n    </div>\n  )\n}\n", "src/components/Shop.jsx": "import React, { useState } from 'react'\nimport { CATALOG_LIST, KATEGORIE } from '../data/catalog'\nimport { ItemArt } from './ItemArt'\nimport { dzwiek } from '../sound'\n\nexport function Shop({ gra }) {\n  const { stan, odblokowany, kup } = gra\n  const [kat, setKat] = useState('flower')\n  const [komunikat, setKomunikat] = useState(null)\n\n  const lista = CATALOG_LIST[kat]\n\n  const sprobuj = (poz) => {\n    if (odblokowany(kat, poz.id)) return\n    if (kup(kat, poz.id)) {\n      dzwiek.zakup()\n      setKomunikat(`Odblokowane: ${poz.nazwa} 🎉`)\n    } else {\n      dzwiek.blad()\n      setKomunikat(`Brakuje ${poz.cena - stan.gwiazdki}★ — jeszcze jeden bukiet do sprzedania!`)\n    }\n    setTimeout(() => setKomunikat(null), 2200)\n  }\n\n  return (\n    <div className=\"widok\">\n      <h2 className=\"naglowek-widoku\">\n        Sklepik <span className=\"licznik-mini\">{stan.gwiazdki}★</span>\n      </h2>\n      <p className=\"podtytul\">Sprzedawaj bukiety, zbieraj gwiazdki i odblokowuj nowe rzeczy.</p>\n\n      <div className=\"zakladki sklep-zakladki\">\n        {KATEGORIE.map((k) => (\n          <button\n            key={k.key}\n            type=\"button\"\n            className={'zakladka' + (kat === k.key ? ' aktywna' : '')}\n            onClick={() => setKat(k.key)}\n          >\n            <span className=\"emo\">{k.emoji}</span>\n            <span>{k.label}</span>\n          </button>\n        ))}\n      </div>\n\n      {komunikat && <div className=\"komunikat\">{komunikat}</div>}\n\n      <div className=\"siatka sklep-siatka\">\n        {lista.map((poz) => {\n          const mam = odblokowany(kat, poz.id)\n          const stac = stan.gwiazdki >= poz.cena\n          return (\n            <button\n              key={poz.id}\n              type=\"button\"\n              className={'kafel sklep-kafel' + (mam ? ' kupiony' : stac ? ' dostepny' : ' zadrogi')}\n              onClick={() => sprobuj(poz)}\n              disabled={mam}\n            >\n              <span className=\"kafel-art\">\n                <ItemArt kind={kat} id={poz.id} color={poz.kolor} />\n              </span>\n              <span className=\"kafel-nazwa\">{poz.nazwa}</span>\n              <span className=\"cena\">{mam ? '✓ mam' : `${poz.cena}★`}</span>\n            </button>\n          )\n        })}\n      </div>\n    </div>\n  )\n}\n", "src/components/IconSheet.jsx": "import React, { useState } from 'react'\nimport { CATALOG_LIST, KATEGORIE } from '../data/catalog'\nimport { ItemArt } from './ItemArt'\nimport { Palette } from './Palette'\n\n// Kartoteka ikon - wszystkie narysowane ksztalty w jednym miejscu.\n// Sluzy do przegladania z siostrzenica: co poprawic, co dorysowac.\nexport function IconSheet({ naStol }) {\n  const [kolor, setKolor] = useState(null)\n\n  return (\n    <div className=\"widok\">\n      <h2 className=\"naglowek-widoku\">Kartoteka ikon</h2>\n      <p className=\"podtytul\">\n        Wszystkie kwiaty, liście, wazony i dodatki narysowane w grze. Kliknij kolor,\n        żeby zobaczyć, jak wygląda cały zestaw w jednym odcieniu.\n      </p>\n\n      <div className=\"kartoteka-paleta\">\n        <Palette kind=\"flower\" tytul=\"Przemaluj wszystko\" wybrany={kolor} onWybierz={setKolor} />\n        <button type=\"button\" className=\"btn maly cichy\" onClick={() => setKolor(null)}>\n          Kolory własne\n        </button>\n      </div>\n\n      {KATEGORIE.map((k) => (\n        <section key={k.key} className=\"kartoteka-sekcja\">\n          <h3>{k.emoji} {k.label} <span className=\"licznik-mini\">{CATALOG_LIST[k.key].length}</span></h3>\n          <div className=\"siatka sklep-siatka\">\n            {CATALOG_LIST[k.key].map((poz) => (\n              <div key={poz.id} className=\"kafel sklep-kafel\">\n                <span className=\"kafel-art\">\n                  <ItemArt kind={k.key} id={poz.id} color={kolor || poz.kolor} />\n                </span>\n                <span className=\"kafel-nazwa\">{poz.nazwa}</span>\n                <span className=\"cena id-pliku\">{poz.id}</span>\n              </div>\n            ))}\n          </div>\n        </section>\n      ))}\n\n      <div className=\"modal-akcje\" style={{ marginTop: 18, justifyContent: 'center' }}>\n        <button type=\"button\" className=\"btn\" onClick={naStol}>Wracam do stołu</button>\n      </div>\n    </div>\n  )\n}\n", "src/App.jsx": "import React, { useRef, useState } from 'react'\nimport { useGame } from './state/useGame'\nimport { Workbench } from './components/Workbench'\nimport { Panels } from './components/Panels'\nimport { Collection } from './components/Collection'\nimport { Shop } from './components/Shop'\nimport { IconSheet } from './components/IconSheet'\nimport { dzwiek } from './sound'\n\nfunction Modal({ tytul, onZamknij, children }) {\n  return (\n    <div className=\"modal-tlo\" onClick={onZamknij}>\n      <div className=\"modal\" onClick={(e) => e.stopPropagation()}>\n        <header>\n          <h3>{tytul}</h3>\n          <button type=\"button\" className=\"zamknij\" onClick={onZamknij} aria-label=\"Zamknij\">✕</button>\n        </header>\n        {children}\n      </div>\n    </div>\n  )\n}\n\nexport default function App() {\n  const gra = useGame()\n  const sceneRef = useRef(null)\n  const [widok, setWidok] = useState('stol')\n  const [zaznaczony, setZaznaczony] = useState(null)\n  const [modal, setModal] = useState(null)\n  const [nazwaBukietu, setNazwaBukietu] = useState('')\n  const [dzwiekOn, setDzwiekOn] = useState(true)\n  const [toast, setToast] = useState(null)\n\n  const { stan, wycena } = gra\n\n  const pokazToast = (t) => {\n    setToast(t)\n    setTimeout(() => setToast(null), 2400)\n  }\n\n  const zapisz = () => {\n    if (gra.zapiszDoKolekcji(nazwaBukietu.trim())) {\n      dzwiek.zapis()\n      pokazToast('Bukiet w kolekcji! 🖼️')\n    } else {\n      dzwiek.blad()\n      pokazToast('Najpierw dodaj chociaż jeden kwiatek')\n    }\n    setNazwaBukietu('')\n    setModal(null)\n  }\n\n  const sprzedaj = () => {\n    const zysk = gra.sprzedaj()\n    if (zysk) {\n      dzwiek.sprzedaz()\n      pokazToast(`Sprzedane za ${zysk}★`)\n    } else {\n      dzwiek.blad()\n      pokazToast('Bukiet musi mieć co najmniej 3 kwiaty')\n    }\n    setModal(null)\n  }\n\n  return (\n    <div className=\"app\">\n      <header className=\"gorne-menu\">\n        <button\n          type=\"button\"\n          className=\"logo\"\n          onClick={() => { setWidok('stol') }}\n        >\n          <span className=\"logo-kwiat\">🌷</span>\n          <span className=\"logo-tekst\">Ogród<br />Gwiazdek</span>\n        </button>\n\n        <nav className=\"nawigacja\">\n          <button type=\"button\" className={widok === 'stol' ? 'aktywny' : ''} onClick={() => { setWidok('stol') }}>\n            Stół\n          </button>\n          <button type=\"button\" className={widok === 'kolekcja' ? 'aktywny' : ''} onClick={() => { setWidok('kolekcja') }}>\n            Kolekcja <b>{stan.kolekcja.length}</b>\n          </button>\n          <button type=\"button\" className={widok === 'sklep' ? 'aktywny' : ''} onClick={() => { setWidok('sklep') }}>\n            Sklepik\n          </button>\n        </nav>\n\n        <div className=\"prawy-rog\">\n          <div className=\"gwiazdki\" title=\"Twoje gwiazdki\">\n            <span className=\"gwiazda\">★</span>\n            <span className=\"ile\">{stan.gwiazdki}</span>\n          </div>\n          <button type=\"button\" className=\"ikonka\" onClick={() => setModal('ustawienia')} title=\"Ustawienia\">⚙️</button>\n        </div>\n      </header>\n\n      {widok === 'stol' && (\n        <main className=\"stol-widok\">\n          <Workbench gra={gra} sceneRef={sceneRef} zaznaczony={zaznaczony} setZaznaczony={setZaznaczony} />\n\n          <div className=\"akcje\">\n            <span className=\"miejsca\">\n              <b className={gra.kwiatow >= gra.limitKwiatow ? 'pelno' : ''}>\n                🌸 {gra.kwiatow}/{gra.limitKwiatow}\n              </b>\n              <b className={gra.lisci >= gra.limitLisci ? 'pelno' : ''}>\n                🌿 {gra.lisci}/{gra.limitLisci}\n              </b>\n            </span>\n            <button type=\"button\" className=\"btn\" onClick={() => setModal('zapisz')}>\n              💾 Zapisz\n            </button>\n            <button\n              type=\"button\"\n              className={'btn zloty' + (wycena.mozna ? '' : ' nieaktywny')}\n              onClick={() => setModal('sprzedaj')}\n            >\n              ★ Sprzedaj <b>{wycena.razem}</b>\n            </button>\n            <button\n              type=\"button\"\n              className=\"btn cichy\"\n              onClick={() => { if (gra.stol.items.length && confirm('Wyczyścić cały stół?')) { gra.wyczyscStol(); dzwiek.kosz() } }}\n            >\n              Wyczyść\n            </button>\n          </div>\n\n          <Panels gra={gra} sceneRef={sceneRef} naSklep={() => setWidok('sklep')} onKomunikat={pokazToast} />\n        </main>\n      )}\n\n      {widok === 'kolekcja' && <Collection gra={gra} naStol={() => setWidok('stol')} />}\n      {widok === 'sklep' && <Shop gra={gra} />}\n      {widok === 'ikony' && <IconSheet naStol={() => setWidok('stol')} />}\n\n      {modal === 'zapisz' && (\n        <Modal tytul=\"Zapisz bukiet w kolekcji\" onZamknij={() => setModal(null)}>\n          <p>Jak nazwiemy ten bukiet?</p>\n          <input\n            className=\"pole\"\n            value={nazwaBukietu}\n            placeholder={`Bukiet ${stan.kolekcja.length + 1}`}\n            onChange={(e) => setNazwaBukietu(e.target.value)}\n            onKeyDown={(e) => e.key === 'Enter' && zapisz()}\n            maxLength={30}\n            autoFocus\n          />\n          <div className=\"modal-akcje\">\n            <button type=\"button\" className=\"btn cichy\" onClick={() => setModal(null)}>Anuluj</button>\n            <button type=\"button\" className=\"btn\" onClick={zapisz}>Zapisz</button>\n          </div>\n        </Modal>\n      )}\n\n      {modal === 'sprzedaj' && (\n        <Modal tytul=\"Sprzedaj bukiet\" onZamknij={() => setModal(null)}>\n          <ul className=\"rachunek\">\n            <li><span>Kwiaty ({wycena.liczbaKwiatow})</span><b>{wycena.zaKwiaty}★</b></li>\n            {wycena.powtorki > 0 && (\n              <li className=\"uwaga\">\n                <span>w tym powtórki ({wycena.powtorki}) — po 1★</span>\n                <b>{wycena.powtorki}★</b>\n              </li>\n            )}\n            <li><span>Liście (różne rodzaje)</span><b>{wycena.zaLiscie}★</b></li>\n            <li><span>Dodatki</span><b>{wycena.zaDodatki}★</b></li>\n            <li><span>Premia za różne gatunki ({wycena.gatunki})</span><b>{wycena.zaRoznorodnosc}★</b></li>\n            <li><span>Wazon / opakowanie</span><b>{wycena.zaWazon}★</b></li>\n            <li className=\"suma\"><span>Razem</span><b>{wycena.razem}★</b></li>\n          </ul>\n          {!wycena.mozna && <p className=\"ostrzezenie\">Do sprzedaży potrzeba minimum 3 kwiatów — masz {wycena.liczbaKwiatow}.</p>}\n          {wycena.powtorki > 2 && (\n            <p className=\"wskazowka\">\n              Najwięcej gwiazdek daje bukiet z <strong>różnych</strong> kwiatów — te same liczą się tylko po 1★.\n            </p>\n          )}\n          <div className=\"modal-akcje\">\n            <button type=\"button\" className=\"btn cichy\" onClick={() => setModal(null)}>Jeszcze poprawię</button>\n            <button type=\"button\" className={'btn zloty' + (wycena.mozna ? '' : ' nieaktywny')} onClick={sprzedaj}>\n              Sprzedaj za {wycena.razem}★\n            </button>\n          </div>\n        </Modal>\n      )}\n\n      {modal === 'ustawienia' && (\n        <Modal tytul=\"Ustawienia\" onZamknij={() => setModal(null)}>\n          <label className=\"przelacznik\">\n            <input\n              type=\"checkbox\"\n              checked={dzwiekOn}\n              onChange={(e) => { setDzwiekOn(e.target.checked); dzwiek.ustawWlaczony(e.target.checked) }}\n            />\n            <span>Dźwięki</span>\n          </label>\n          <p className=\"statystyki\">\n            Sprzedanych bukietów: <b>{stan.sprzedanych}</b><br />\n            W kolekcji: <b>{stan.kolekcja.length}</b><br />\n            Gwiazdek: <b>{stan.gwiazdki}</b>\n          </p>\n          <div className=\"modal-akcje kolumna\">\n            <button type=\"button\" className=\"btn cichy\" onClick={() => { setWidok('ikony'); setModal(null) }}>\n              Zobacz kartotekę ikon\n            </button>\n            <button type=\"button\" className=\"btn cichy\" onClick={() => { gra.dosypGwiazdki(50); dzwiek.zakup(); pokazToast('+50★') }}>\n              +50★ (tryb dla rodzica)\n            </button>\n            <button\n              type=\"button\"\n              className=\"btn niebezpieczny\"\n              onClick={() => {\n                if (confirm('Skasować WSZYSTKO: gwiazdki, kolekcję i odblokowane kwiaty?')) {\n                  gra.reset()\n                  setModal(null)\n                  pokazToast('Gra zaczyna się od nowa')\n                }\n              }}\n            >\n              Zacznij grę od nowa\n            </button>\n          </div>\n        </Modal>\n      )}\n\n      {toast && <div className=\"toast\">{toast}</div>}\n    </div>\n  )\n}\n"}
+</script>
+
+<script>
+// Wszystkie moduly siedza w tym pliku - zero pobierania z dysku, wiec dziala z file://
+var ZRODLA = JSON.parse(document.getElementById('zrodla').textContent)
+var KOLEJNOSC = ["src/data/colors.js", "src/data/catalog.js", "src/sound.js", "src/art/flowers.jsx", "src/art/leaves.jsx", "src/art/extras.jsx", "src/art/vases.jsx", "src/art/Table.jsx", "src/art/stems.js", "src/state/useGame.js", "src/components/ItemArt.jsx", "src/components/Palette.jsx", "src/components/BouquetPreview.jsx", "src/components/Workbench.jsx", "src/components/Panels.jsx", "src/components/Collection.jsx", "src/components/Shop.jsx", "src/components/IconSheet.jsx", "src/App.jsx"]
+var mods = {}
+
+function nazwa(sciezka) {
+  return sciezka.split('/').pop().replace(/\.(jsx|js)$/, '')
+}
+
+function req(spec) {
+  if (spec === 'react') return React
+  if (spec === 'react-dom/client') return ReactDOM
+  if (spec.slice(-4) === '.css') return {}
+  var key = nazwa(spec)
+  if (!(key in mods)) throw new Error('brak modulu: ' + spec)
+  return mods[key]
+}
+
+try {
+  if (typeof React === 'undefined' || typeof Babel === 'undefined') {
+    throw new Error('Nie udalo sie pobrac React/Babel z internetu. Sprawdz polaczenie i odswiez strone.')
+  }
+  for (var i = 0; i < KOLEJNOSC.length; i++) {
+    var sciezka = KOLEJNOSC[i]
+    var kod = Babel.transform(ZRODLA[sciezka], {
+      presets: ['react'],
+      plugins: ['transform-modules-commonjs'],
+      filename: sciezka,
+    }).code
+    var module = { exports: {} }
+    new Function('require', 'module', 'exports', 'React', kod)(req, module, module.exports, React)
+    mods[nazwa(sciezka)] = module.exports
+  }
+  document.getElementById('root').innerHTML = ''
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    React.createElement(React.StrictMode, null, React.createElement(mods.App.default))
+  )
+} catch (e) {
+  document.getElementById('ladowanie').remove()
+  document.getElementById('err').textContent = 'BLAD: ' + e.message + '\n\n' + (e.stack || '')
+}
+</script>
+</body></html>

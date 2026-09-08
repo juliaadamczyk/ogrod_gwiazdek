@@ -18,13 +18,9 @@ npm run dev
 
 Aplikacja startuje na `http://localhost:5173`.
 
-### Instalacja Node
+### Wymagania
 
-Homebrew na tym Macu kompilował Node ze źródeł (razem z LLVM — godziny), więc
-Node stoi jako **oficjalna paczka z nodejs.org rozpakowana do katalogu domowego**,
-bez `sudo`: `~/.local/node`, dopisana do `PATH` w `~/.zshrc`. Wersja v24.20.0 LTS,
-suma kontrolna zweryfikowana z `SHASUMS256.txt`. Odinstalowanie = skasowanie
-katalogu i linijki z `.zshrc`.
+Node.js 20 lub nowszy (zalecany 22 LTS) — do pobrania z [nodejs.org](https://nodejs.org).
 
 ### Bez Node — plik awaryjny
 
@@ -49,7 +45,7 @@ bo pozwala wysłać całą grę jednym załącznikiem.
 ⚠️ Przy otwarciu przez `file://` część przeglądarek (m.in. Safari) blokuje
 `localStorage` — gra wtedy działa, ale **nie zapamięta gwiazdek i kolekcji**
 po zamknięciu karty. Gra jest na to odporna (nie wywala się), ale jeśli
-siostrzenica ma zbierać gwiazdki na dłużej, lepiej uruchomić przez serwer:
+gwiazdki i kolekcja mają się zachować na dłużej, lepiej uruchomić przez serwer:
 `python3 -m http.server 8899`, a docelowo przez `npm run dev`.
 
 | Komenda | Co robi |

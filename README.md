@@ -306,9 +306,10 @@ npm run ikony     # → src/assets/flowers|leaves|vases|extras/*.svg
 Podgląd w grze: ⚙️ → **Zobacz kartotekę ikon** — cały zestaw na jednym ekranie,
 z możliwością przemalowania wszystkiego na raz.
 
-Folder `flower_icons/` z pobranymi PNG-ami został jako **referencja wizualna** —
-nie jest używany przez grę. Były w trzech różnych stylach (płaski bez konturu,
-płaski z czarnym konturem, cienki outline) i pokrywały ~10 z 22 nazw z listy.
+Pobrane wcześniej PNG-i (Flaticon, Freepik, SVG Repo) posłużyły tylko jako
+**inspiracja wizualna** przy rysowaniu — nie są częścią repozytorium ani gry.
+Były w trzech różnych stylach (płaski bez konturu, płaski z czarnym konturem,
+cienki outline) i pokrywały ~10 z 22 nazw z listy.
 
 ### Co zostało sprawdzone
 

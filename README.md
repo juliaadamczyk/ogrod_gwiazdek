@@ -20,7 +20,7 @@ Aplikacja startuje na `http://localhost:5173`.
 
 ### Wymagania
 
-Node.js 20 lub nowszy (zalecany 22 LTS) — do pobrania z [nodejs.org](https://nodejs.org).
+Node.js 20 lub nowszy (CI buduje na 24) — do pobrania z [nodejs.org](https://nodejs.org).
 
 ### Bez Node — plik awaryjny
 
@@ -53,23 +53,19 @@ gwiazdki i kolekcja mają się zachować na dłużej, lepiej uruchomić przez se
 | `npm run dev` | serwer developerski |
 | `npm run build` | build produkcyjny do `dist/` |
 | `npm run preview` | podgląd builda |
-| `npm run deploy` | build + publikacja na GitHub Pages (`gh-pages`) |
 | `npm run ikony` | eksport wszystkich ikon do plików `.svg` w `src/assets/` |
 | `python3 scripts/zbuduj-graj-bez-node.py` | przebudowa pliku `graj-bez-node.html` (nie wymaga Node) |
 
 ### Deploy na GitHub Pages
 
+Publikacja jest automatyczna. Każdy `push` na `main` uruchamia workflow
+[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml), który robi
+`npm ci`, `npm run build` i wystawia `dist/` na GitHub Pages.
+
+Jednorazowa konfiguracja w repo: **Settings → Pages → Source: „GitHub Actions"**.
+
 `vite.config.js` ma `base: './'`, więc gra działa niezależnie od nazwy repo —
-nie trzeba nic podmieniać. Wystarczy:
-
-```bash
-git init && git add -A && git commit -m "Ogród Gwiazdek"
-git remote add origin git@github.com:UZYTKOWNIK/ogrod-gwiazdek.git
-git push -u origin main
-npm run deploy
-```
-
-Potem w ustawieniach repo: **Settings → Pages → Branch: `gh-pages`**.
+nie trzeba nic podmieniać.
 
 ---
 
@@ -334,7 +330,7 @@ Po instalacji Node sprawdzone także na prawdziwym Vite: `npm install` (109 pacz
 `npm run dev` i `npm run ikony` (46 plików SVG). Gra przeklikana na
 `localhost:5173` — dodawanie, sprzedaż, naliczanie gwiazdek, zapis stanu.
 
-**Nadal nie sprawdzone:** `npm run deploy` (nie ma jeszcze repo na GitHubie)
+**Nadal nie sprawdzone:** publikacja na GitHub Pages (workflow nie był jeszcze uruchomiony)
 oraz **dotyk na prawdziwym telefonie** — Pointer Events testowane były myszą
 i zdarzeniami syntetycznymi w przeglądarce desktopowej. To gra głównie na
 telefon, więc to realna luka.

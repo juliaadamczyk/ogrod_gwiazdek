@@ -63,7 +63,7 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className={'app' + (widok === 'stol' ? ' app-stol' : '')}>
       <header className="gorne-menu">
         <button
           type="button"

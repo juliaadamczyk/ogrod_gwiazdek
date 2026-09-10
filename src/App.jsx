@@ -108,16 +108,18 @@ export default function App() {
                 🌿 {gra.lisci}/{gra.limitLisci}
               </b>
             </span>
-            <button type="button" className="btn zapisz" onClick={() => setModal('zapisz')} title="Zapisz bukiet">
-              💾<span className="etykieta"> Zapisz</span>
-            </button>
-            <button
-              type="button"
-              className={'btn zloty' + (wycena.mozna ? '' : ' nieaktywny')}
-              onClick={() => setModal('sprzedaj')}
-            >
-              ★ Sprzedaj <b>{wycena.razem}</b>
-            </button>
+            <div className="akcje-przyciski">
+              <button type="button" className="btn zapisz" onClick={() => setModal('zapisz')} title="Zapisz bukiet">
+                💾<span className="etykieta"> Zapisz</span>
+              </button>
+              <button
+                type="button"
+                className={'btn zloty' + (wycena.mozna ? '' : ' nieaktywny')}
+                onClick={() => setModal('sprzedaj')}
+              >
+                ★ Sprzedaj <b>{wycena.razem}</b>
+              </button>
+            </div>
           </div>
 
           <Panels gra={gra} sceneRef={sceneRef} naSklep={() => setWidok('sklep')} onKomunikat={pokazToast} />

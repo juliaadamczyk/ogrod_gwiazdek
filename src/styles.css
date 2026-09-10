@@ -554,19 +554,24 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
   .akcje > * { pointer-events: auto; }
   /* Licznik i Zapisz trzymaja sie lewego rogu, Sprzedaj prawego - srodek
      zostaje wolny, bo tam siega kopula pelnego bukietu. */
-  .akcje .miejsca { order: 1; margin-right: auto; }
-  .akcje .btn.zapisz { order: 2; }
-  .akcje .btn.zloty { order: 3; }
+  .akcje .miejsca { margin-right: auto; }
   /* Zapisz sama ikona - Sprzedaj zostaje z napisem i liczba gwiazdek,
      bo to nagroda i musi byc czytelna */
-  .akcje .btn.zapisz { padding: 8px 12px; }
+  .akcje .btn.zapisz { padding: 5px 10px; }
   .akcje .btn.zapisz .etykieta { display: none; }
   .akcje .btn {
-    padding: 8px 14px;
-    font-size: 14.5px;
-    min-height: 38px;
+    padding: 6px 12px;
+    font-size: 13px;
+    min-height: 32px;
     box-shadow: 0 3px 0 #c9385c;
     white-space: nowrap;
+  }
+  /* column-reverse: w DOM Zapisz jest pierwszy, na ekranie ma byc pod Sprzedaj */
+  .akcje-przyciski {
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: flex-end;
+    gap: 6px;
   }
   .akcje .btn.zloty { box-shadow: 0 3px 0 var(--zloty-ciemny); }
   /* .akcje .miejsca - bazowa regula .miejsca stoi nizej w pliku, wiec sama

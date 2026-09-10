@@ -13,11 +13,12 @@ export function IconSheet({ naStol }) {
       <h2 className="naglowek-widoku">Kartoteka ikon</h2>
       <p className="podtytul">
         Wszystkie kwiaty, liście, wazony i dodatki narysowane w grze. Kliknij kolor,
-        żeby zobaczyć, jak wygląda cały zestaw w jednym odcieniu.
+        żeby <b>zobaczyć podgląd</b> — jak wyglądałby cały zestaw w jednym odcieniu.
+        To tylko podgląd: nie zmienia bukietu na stole ani kolorów w grze.
       </p>
 
       <div className="kartoteka-paleta">
-        <Palette kind="flower" tytul="Przemaluj wszystko" wybrany={kolor} onWybierz={setKolor} />
+        <Palette kind="flower" tytul="Przemaluj podgląd" wybrany={kolor} onWybierz={setKolor} />
         <button type="button" className="btn maly cichy" onClick={() => setKolor(null)}>
           Kolory własne
         </button>

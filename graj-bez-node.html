@@ -255,15 +255,18 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .paleta-tytul { font-size: 13px; font-weight: 600; color: var(--tekst-jasny); margin-bottom: 6px; }
 .paleta-siatka {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  /* Staly rozmiar, nie 1fr: przy 1fr probki rozciagaly sie na cala szerokosc
+     panelu, wiec na szerokim ekranie robily sie ogromne. Teraz zawijaja sie. */
+  grid-template-columns: repeat(auto-fill, 28px);
+  justify-content: start;
   gap: 5px;
 }
 .swatch {
   border: 2px solid rgba(0, 0, 0, 0.08);
-  border-radius: 8px;
+  border-radius: 7px;
   aspect-ratio: 1;
   padding: 0;
-  min-width: 24px;
+  min-width: 0;
 }
 .swatch.wybrany { border-color: var(--tekst); transform: scale(1.14); }
 
@@ -568,8 +571,8 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
   .akcje > * { pointer-events: auto; }
   /* Licznik i Zapisz trzymaja sie lewego rogu, Sprzedaj prawego - srodek
      zostaje wolny, bo tam siega kopula pelnego bukietu. */
-  .akcje .btn.zapisz { order: 1; }
-  .akcje .miejsca { order: 2; margin-right: auto; }
+  .akcje .miejsca { order: 1; margin-right: auto; }
+  .akcje .btn.zapisz { order: 2; }
   .akcje .btn.zloty { order: 3; }
   /* Zapisz sama ikona - Sprzedaj zostaje z napisem i liczba gwiazdek,
      bo to nagroda i musi byc czytelna */

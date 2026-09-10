@@ -609,12 +609,19 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
   .ikonka { width: 34px; height: 34px; font-size: 16px; flex: 0 0 auto; }
   .prawy-rog { gap: 5px; }
   .narzedzia { width: 252px; }
-  .kafel { min-height: 92px; }
-  .kafel-art { width: 50px; height: 50px; }
+  .siatka { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); }
+  .kafel { min-height: 84px; }
+  .kafel-art { width: 46px; height: 46px; }
 }
 
 @media (max-width: 420px) {
-  .siatka { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); }
+  /* 58px => 5 kafli w rzedzie zamiast 4 (polka ma ~331px przy 8px odstepu).
+     Kafel ma nadal ~60px szerokosci, czyli powyzej progu 44px na palec. */
+  .siatka { grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); }
+  .kafel { min-height: 76px; padding: 6px 3px 5px; gap: 2px; }
+  .kafel-art { width: 40px; height: 40px; }
+  .kafel-nazwa { font-size: 10px; }
+  .klodka { font-size: 10px; }
   .btn { padding: 11px 16px; font-size: 15px; }
 }
 

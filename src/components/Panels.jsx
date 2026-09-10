@@ -25,13 +25,17 @@ export function Panels({ gra, sceneRef, naSklep, onKomunikat }) {
 
   const startDrag = (e, poz) => {
     if (kat === 'vase') return
-    e.currentTarget.setPointerCapture(e.pointerId)
-    drag.current = { poz, startX: e.clientX, startY: e.clientY, ruszony: false }
+    // Na dotyku NIE przechwytujemy wskaznika i nie przeciagamy z polki: gest
+    // w gore (polka jest POD stolem) walczylby z przewijaniem listy kwiatow.
+    // Zostaje tapniecie - kwiat sam wskakuje na wolne miejsce w wazonie.
+    const dotyk = e.pointerType === 'touch'
+    if (!dotyk) e.currentTarget.setPointerCapture(e.pointerId)
+    drag.current = { poz, startX: e.clientX, startY: e.clientY, ruszony: false, dotyk }
   }
 
   const moveDrag = (e) => {
     const d = drag.current
-    if (!d) return
+    if (!d || d.dotyk) return
     if (!d.ruszony && Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < 8) return
     d.ruszony = true
     setDuch({ poz: d.poz, x: e.clientX, y: e.clientY })
@@ -42,6 +46,9 @@ export function Panels({ gra, sceneRef, naSklep, onKomunikat }) {
     drag.current = null
     setDuch(null)
     if (!d) return
+    // Palec pojechal w bok/w dol = to bylo przewijanie polki, nie tapniecie.
+    // Zwykle zalatwia to pointercancel, ale nie kazda przegladarka go wysyla.
+    if (d.dotyk && Math.hypot(e.clientX - d.startX, e.clientY - d.startY) > 10) return
     if (!d.ruszony) {
       // tapniecie = kwiat sam wskakuje na wolny punkt kotwiczacy
       const blad = dodaj(kat, poz.id, poz.kolor, null)

@@ -108,8 +108,8 @@ export default function App() {
                 🌿 {gra.lisci}/{gra.limitLisci}
               </b>
             </span>
-            <button type="button" className="btn" onClick={() => setModal('zapisz')}>
-              💾 Zapisz
+            <button type="button" className="btn zapisz" onClick={() => setModal('zapisz')} title="Zapisz bukiet">
+              💾<span className="etykieta"> Zapisz</span>
             </button>
             <button
               type="button"
@@ -117,13 +117,6 @@ export default function App() {
               onClick={() => setModal('sprzedaj')}
             >
               ★ Sprzedaj <b>{wycena.razem}</b>
-            </button>
-            <button
-              type="button"
-              className="btn cichy"
-              onClick={() => { if (gra.stol.items.length && confirm('Wyczyścić cały stół?')) { gra.wyczyscStol(); dzwiek.kosz() } }}
-            >
-              Wyczyść
             </button>
           </div>
 
@@ -201,6 +194,19 @@ export default function App() {
             Gwiazdek: <b>{stan.gwiazdki}</b>
           </p>
           <div className="modal-akcje kolumna">
+            <button
+              type="button"
+              className="btn cichy"
+              onClick={() => {
+                if (gra.stol.items.length && confirm('Wyczyścić cały stół?')) {
+                  gra.wyczyscStol()
+                  dzwiek.kosz()
+                  setModal(null)
+                }
+              }}
+            >
+              Wyczyść stół
+            </button>
             <button type="button" className="btn cichy" onClick={() => { setWidok('ikony'); setModal(null) }}>
               Zobacz kartotekę ikon
             </button>

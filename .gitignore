@@ -11,3 +11,7 @@ dist/
 *.local
 .env
 .env.*
+
+# lokalne notatki deweloperskie
+CLAUDE.md
+.claude/
